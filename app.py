@@ -90,7 +90,19 @@ def save_to_gsheet(record: dict):
         creds = ServiceAccountCredentials.from_json_keyfile_dict(info, scope)
         client = gspread.authorize(creds)
         sheet = client.open("DNM-keystroke-log").sheet1
-        sheet.append_row(list(record.values()))
+        ordered = [
+    		record["user_id"],
+    		record["gender"],
+    		record["age"],
+    		record["education"],
+    		record["dominant_hand"],
+    		record["typing_exp"],
+    		record["keyboard_type"],
+    		record["sentence"],
+    		record["timestamp"]
+	]
+	st.write("📋 寫入 Google Sheet 的資料：", ordered)
+	sheet.append_row(ordered)
         st.success("✅ 資料已成功寫入 Google Sheet！")
     except Exception as e:
         st.error(f"❌ Google Sheet 寫入失敗：{e}")
