@@ -68,7 +68,8 @@ components.html(
 
         function sendData() {
             const payload = JSON.stringify(log);
-            parent.postMessage({type: 'keylog', data: payload}, '*');
+            console.log("Sending data:", payload);
+            window.parent.postMessage({type: 'keylog', data: payload}, '*');
         }
     </script>
     """,
