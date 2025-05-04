@@ -66,15 +66,17 @@ components.html("""
 """, height=300)
 
 # --- 透過 Streamlit 事件取得資料 ---
-result = stj.st_javascript(\"\"\"
-new Promise((resolve) => {
-  window.addEventListener("message", (e) => {
-    if (e.data && e.data.type === "keylog_data") {
-      resolve(e.data.data);
-    }
-  });
-});
-\"\"\")
+result = stj.st_javascript(
+    """
+    new Promise((resolve) => {
+      window.addEventListener("message", (e) => {
+        if (e.data && e.data.type === "keylog_data") {
+          resolve(e.data.data);
+        }
+      });
+    });
+    """
+)
 
 if result:
     try:
@@ -83,7 +85,6 @@ if result:
     except Exception as e:
         st.error(f"❌ JSON 格式錯誤：{e}")
 else:
-    # 為避免 keylog_data 不存在
     st.session_state.setdefault("keylog_data", None)
 
 # --- 寫入 Google Sheet ---
