@@ -132,13 +132,11 @@ def save_keylog_to_sheet2(user_id, keylog):
         creds = ServiceAccountCredentials.from_json_keyfile_dict(info, scope)
         client = gspread.authorize(creds)
         spreadsheet = client.open("DNM-keystroke-log")
-        if "Sheet2" not in [ws.title for ws in spreadsheet.worksheets()]:
-            spreadsheet.add_worksheet(title="Sheet2", rows="1000", cols="2")
-        sheet2 = spreadsheet.worksheet("Sheet2")
+        sheet2 = spreadsheet.worksheet("工作表2")
 
         row = [user_id, json.dumps(keylog, ensure_ascii=False)]
         sheet2.append_row(row)
-        st.success("✅ 整包 keystroke JSON 已寫入 Sheet2！")
+        st.success("✅ 整包 keystroke JSON 已寫入 工作表2！")
     except Exception as e:
         st.error(f"❌ Keystroke log 寫入失敗：{e}")
 
