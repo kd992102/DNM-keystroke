@@ -83,13 +83,16 @@ st.markdown("---")
 def save_to_gsheet(record: dict):
     try:
         info = json.loads(st.secrets["GOOGLE_SHEET_CREDENTIALS"])
+        st.write("讀取金鑰成功")
         scope = [
             "https://spreadsheets.google.com/feeds",
             "https://www.googleapis.com/auth/drive"
         ]
         creds = ServiceAccountCredentials.from_json_keyfile_dict(info, scope)
         client = gspread.authorize(creds)
+        st.write("綁定金鑰成功")
         sheet = client.open("DNM-keystroke-log").sheet1
+        st.write("成功連結sheet")
         ordered = [
     		record["user_id"],
     		record["gender"],
