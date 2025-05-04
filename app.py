@@ -119,7 +119,7 @@ keylog = st.text_area("🔍 Keystroke JSON 紀錄（開發用）", "", height=15
 
 if st.button("📤 送出資料"):
     st.markdown("⏳ 資料傳送中...")
-    st.experimental_set_query_params()
+    st.query_params.clear()
     st.markdown("<script>window.postMessage(\"submit\", \"*\")</script>", unsafe_allow_html=True)
     time.sleep(1.5)
 
