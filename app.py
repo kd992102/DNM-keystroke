@@ -43,8 +43,8 @@ sentence = "我每天都會使用電腦打字處理工作"
 st.markdown("---")
 st.markdown(f"## ✍️ 請輸入下列句子：\n\n**{sentence}**")
 
-# --- 前端打字區與 keylogger ---
-components.html(
+# --- JS 元件用來記錄按鍵並傳回 Streamlit ---
+keylog_receiver = components.html(
     """
     <textarea id='inputArea' rows='4' style='width: 100%; font-size: 20px;' placeholder='請輸入上方句子，系統將自動記錄按鍵時間...'></textarea>
     <button onclick="sendData()" style='margin-top: 10px; font-size: 18px;'>送出按鍵紀錄</button>
@@ -60,23 +60,30 @@ components.html(
 
         function sendData() {
             const payload = JSON.stringify(log);
-            const encoded = encodeURIComponent(payload);
-            window.location.search = '?keylog=' + encoded;
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.srcdoc = `<script>window.parent.postMessage(${payload}, '*');<\/script>`;
+            document.body.appendChild(iframe);
         }
     </script>
     """,
     height=200
 )
 
-# --- 用 session_state 儲存 keylog ---
-from urllib.parse import unquote
-params = st.query_params
-if "keylog" in params:
-    try:
-        st.session_state.keylog_data = json.loads(unquote(params["keylog"]))
-        st.success("✅ 已接收 keystroke log 資料")
-    except:
-        st.warning("⚠️ 無法解析 keylog 資料")
+# --- JS 資料接收 ---
+from streamlit_javascript import st_javascript
+result = st_javascript("""
+    window.addEventListener("message", (event) => {
+        if (event.data && Array.isArray(event.data)) {
+            window._streamlitKeylog = event.data;
+        }
+    });
+    await new Promise(resolve => setTimeout(() => resolve(window._streamlitKeylog || []), 1000));
+""")
+
+if result:
+    st.session_state.keylog_data = result
+    st.success("✅ 已接收 keystroke log 資料")
 
 # --- 顯示 keylog JSON ---
 if "keylog_data" in st.session_state and st.session_state.keylog_data:
