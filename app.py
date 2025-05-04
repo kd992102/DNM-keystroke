@@ -49,29 +49,31 @@ st.markdown("""
 <textarea id="inputArea" rows="4" style="width:100%; font-size:20px;" placeholder="請輸入上方句子，系統將自動記錄按鍵時間..."></textarea>
 <button id="sendBtn" style="margin-top:10px; font-size:18px;">送出按鍵紀錄</button>
 <script>
-  const log = [];
-  const input = document.getElementById("inputArea");
+  document.addEventListener("DOMContentLoaded", () => {
+    const log = [];
+    const input = document.getElementById("inputArea");
+    const btn = document.getElementById("sendBtn");
 
-  if (input) {
-    input.addEventListener('keydown', e => {
-      log.push({key: e.key, type: 'down', time: Date.now()});
-    });
-    input.addEventListener('keyup', e => {
-      log.push({key: e.key, type: 'up', time: Date.now()});
-    });
-  }
-
-  const btn = document.getElementById("sendBtn");
-  if (btn) {
-    btn.addEventListener("click", () => {
-      const payload = JSON.stringify(log);
-      console.log("🔁 keylog sent:", payload);
-      const event = new CustomEvent("streamlit:keystrokeData", {
-        detail: payload
+    if (input) {
+      input.addEventListener('keydown', e => {
+        log.push({key: e.key, type: 'down', time: Date.now()});
       });
-      window.dispatchEvent(event);
-    });
-  }
+      input.addEventListener('keyup', e => {
+        log.push({key: e.key, type: 'up', time: Date.now()});
+      });
+    }
+
+    if (btn) {
+      btn.addEventListener("click", () => {
+        const event = new CustomEvent("streamlit:keystrokeData", {
+          detail: JSON.stringify(log)
+        });
+        window.dispatchEvent(event);
+      });
+    } else {
+      console.error("❌ 找不到送出按鈕 sendBtn");
+    }
+  });
 </script>
 """, unsafe_allow_html=True)
 
