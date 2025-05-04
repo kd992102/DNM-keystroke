@@ -48,28 +48,38 @@ st.markdown(f"## ✍️ 請輸入下列句子：\n\n**{sentence}**")
 if "keylog_data" not in st.session_state:
     st.session_state.keylog_data = []
 
-# --- 前端 keylogger 使用 streamlit-javascript ---
+# --- 直接用 st_javascript 插入 HTML 與 JS 並即時回傳 log ---
 keylog_data = st_javascript(
     """
-    async function recordKeystrokes() {
-        const log = [];
-        const textarea = window.document.getElementById('inputArea');
-        textarea.addEventListener('keydown', e => {
-            log.push({key: e.key, type: 'down', time: Date.now()});
-        });
-        textarea.addEventListener('keyup', e => {
-            log.push({key: e.key, type: 'up', time: Date.now()});
-        });
+    const textarea = document.createElement('textarea');
+    textarea.rows = 4;
+    textarea.style.width = '100%';
+    textarea.style.fontSize = '20px';
+    textarea.placeholder = '請輸入上方句子，系統將自動記錄按鍵時間...';
+    document.body.appendChild(textarea);
 
-        await new Promise(resolve => setTimeout(resolve, 10000));
-        return log;
-    }
-    recordKeystrokes();
-    """,
-    key="logger"
+    const log = [];
+    textarea.addEventListener('keydown', e => {
+        log.push({key: e.key, type: 'down', time: Date.now()});
+    });
+    textarea.addEventListener('keyup', e => {
+        log.push({key: e.key, type: 'up', time: Date.now()});
+    });
+
+    const button = document.createElement('button');
+    button.innerText = '送出按鍵紀錄';
+    button.style.marginTop = '10px';
+    button.style.fontSize = '18px';
+    button.onclick = () => {
+        window.dispatchEvent(new CustomEvent('streamlit:sendData', { detail: log }));
+    };
+    document.body.appendChild(button);
+
+    return await new Promise((resolve) => {
+        window.addEventListener('streamlit:sendData', (event) => resolve(event.detail), { once: true });
+    });
+    """
 )
-
-st.text_area("請輸入：", key="inputArea", height=100)
 
 if keylog_data:
     st.session_state.keylog_data = keylog_data
