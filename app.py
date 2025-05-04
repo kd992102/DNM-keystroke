@@ -96,7 +96,7 @@ def save_to_gsheet(record: dict):
         ]
         creds = ServiceAccountCredentials.from_json_keyfile_dict(info, scope)
         client = gspread.authorize(creds)
-        sheet = client.open("DNM-keystoke-log").sheet1
+        sheet = client.open("DNM-keystroke-log").sheet1
 
         ordered = [
             record["user_id"],
