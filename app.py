@@ -58,10 +58,8 @@ st.markdown("""
     log.push({key: e.key, type: 'up', time: Date.now()});
   });
   document.getElementById("sendBtn").addEventListener("click", () => {
-    const data = JSON.stringify(log);
-    if (window.streamlitReceiveMessage) {
-      window.streamlitReceiveMessage({ type: "keylog_data", data });
-    }
+    const payload = JSON.stringify({ type: "keylog_data", data: JSON.stringify(log) });
+    window.parent.postMessage(payload, "*");
   });
 </script>
 """, unsafe_allow_html=True)
@@ -73,11 +71,16 @@ st.session_state.setdefault("keylog_data", [])
 result = stj.st_javascript(
     """
     new Promise((resolve) => {
-      window.streamlitReceiveMessage = (data) => {
-        if (data && data.type === "keylog_data") {
-          resolve(data.data);
+      window.addEventListener("message", (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          if (payload && payload.type === "keylog_data") {
+            resolve(payload.data);
+          }
+        } catch (e) {
+          // 忽略非 JSON 資料
         }
-      };
+      });
     });
     """
 )
@@ -89,7 +92,7 @@ if result is not None:
             st.session_state["keylog_data"] = parsed
             st.success("✅ 已接收按鍵資料")
         else:
-            st.warning("⚠️ 資料格式錯誤")
+            st.warning("⚠️ 資料格式錯誤（不是 list）")
     except Exception as e:
         st.warning(f"⚠️ 無法解析 keylog 資料：{e}")
 
