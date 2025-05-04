@@ -91,8 +91,14 @@ def save_to_gsheet(record: dict):
         creds = ServiceAccountCredentials.from_json_keyfile_dict(info, scope)
         client = gspread.authorize(creds)
         st.write("綁定金鑰成功")
-        sheet = client.open("DNM-keystroke-log").sheet1
-        st.write("成功連結sheet")
+        sheet_list = client.openall()
+        for s in sheet_list:
+            st.write("找到表單：", s.title)
+        try:
+            sheet = client.open("DNM-keystroke-log").sheet1
+            st.write("成功連結sheet")
+        except Exception as e:
+            st.error(f"❌ 連結 Google Sheet 失敗：{e}")
         ordered = [
     		record["user_id"],
     		record["gender"],
