@@ -67,8 +67,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- 初始化 keylog_data ---
-if "keylog_data" not in st.session_state:
-    st.session_state["keylog_data"] = []
+st.session_state.setdefault("keylog_data", [])
 
 # --- 接收 JS 回傳資料 ---
 result = stj.st_javascript(
@@ -83,16 +82,16 @@ result = stj.st_javascript(
     """
 )
 
-if result:
+if result is not None:
     try:
         parsed = json.loads(result)
-        if isinstance(parsed, list) and len(parsed) > 0:
+        if isinstance(parsed, list):
             st.session_state["keylog_data"] = parsed
             st.success("✅ 已接收按鍵資料")
         else:
-            st.warning("⚠️ 接收到的按鍵資料為空")
-    except:
-        st.warning("⚠️ 無法解析 keylog 資料。")
+            st.warning("⚠️ 資料格式錯誤")
+    except Exception as e:
+        st.warning(f"⚠️ 無法解析 keylog 資料：{e}")
 
 # --- 寫入 Google Sheet ---
 def save_to_gsheet(record: dict):
@@ -142,7 +141,7 @@ def save_keylog_to_sheet2(user_id, keylog):
 
 # --- 送出資料 ---
 if st.button("📤 送出資料"):
-    if not st.session_state.get("keylog_data"):
+    if not isinstance(st.session_state.get("keylog_data"), list) or len(st.session_state.get("keylog_data")) == 0:
         st.warning("⚠️ 請先按下『送出按鍵紀錄』，才能提交資料。")
         st.stop()
 
