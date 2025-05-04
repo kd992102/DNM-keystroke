@@ -6,7 +6,6 @@ import json
 import streamlit.components.v1 as components
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-import streamlit_javascript as stj
 
 st.set_page_config(page_title="Keystroke Dynamics Study", layout="centered")
 
@@ -44,49 +43,45 @@ sentence = "我每天都會使用電腦打字處理工作"
 st.markdown("---")
 st.markdown(f"## ✍️ 請輸入下列句子：\n\n**{sentence}**")
 
-# --- JS 元件 ---
-st.markdown("### 打字區")
-components.html("""
-<textarea id='inputArea' rows='4' style='width: 100%; font-size: 20px;' placeholder='請輸入上方句子'></textarea>
-<button onclick="sendLog()" style='margin-top: 10px; font-size: 18px;'>送出按鍵紀錄</button>
-<script>
-  const log = [];
-  const input = document.getElementById('inputArea');
-  input.addEventListener('keydown', e => {
-    log.push({key: e.key, type: 'down', time: Date.now()});
-  });
-  input.addEventListener('keyup', e => {
-    log.push({key: e.key, type: 'up', time: Date.now()});
-  });
-  function sendLog() {
-    const data = JSON.stringify(log);
-    window.parent.postMessage({ type: "keylog_data", data: data }, "*");
-  }
-</script>
-""", height=300)
+# --- 前端打字區與 keylogger ---
+components.html(
+    """
+    <textarea id='inputArea' rows='4' style='width: 100%; font-size: 20px;' placeholder='請輸入上方句子，系統將自動記錄按鍵時間...'></textarea>
+    <button onclick="sendData()" style='margin-top: 10px; font-size: 18px;'>送出按鍵紀錄</button>
+    <script>
+        const log = [];
+        const input = document.getElementById("inputArea");
+        input.addEventListener('keydown', e => {
+            log.push({key: e.key, type: 'down', time: Date.now()});
+        });
+        input.addEventListener('keyup', e => {
+            log.push({key: e.key, type: 'up', time: Date.now()});
+        });
 
-# --- 透過 Streamlit 事件取得資料 ---
-result = stj.st_javascript(
-    """
-    new Promise((resolve) => {
-      window.addEventListener("message", (e) => {
-        if (e.data && e.data.type === "keylog_data") {
-          resolve(e.data.data);
+        function sendData() {
+            const payload = JSON.stringify(log);
+            const encoded = encodeURIComponent(payload);
+            window.location.search = '?keylog=' + encoded;
         }
-      });
-    });
-    """
+    </script>
+    """,
+    height=200
 )
 
-if result:
+# --- 用 session_state 儲存 keylog ---
+from urllib.parse import unquote
+params = st.query_params
+if "keylog" in params:
     try:
-        st.success("result不為空")
-        keylog_parsed = json.loads(result)
-        st.session_state["keylog_data"] = keylog_parsed
-    except Exception as e:
-        st.error(f"❌ JSON 格式錯誤：{e}")
-else:
-    st.session_state.setdefault("keylog_data", None)
+        st.session_state.keylog_data = json.loads(unquote(params["keylog"]))
+        st.success("✅ 已接收 keystroke log 資料")
+    except:
+        st.warning("⚠️ 無法解析 keylog 資料")
+
+# --- 顯示 keylog JSON ---
+if "keylog_data" in st.session_state and st.session_state.keylog_data:
+    st.markdown("### 🔍 Keystroke JSON 紀錄")
+    st.json(st.session_state.keylog_data)
 
 # --- 寫入 Google Sheet ---
 def save_to_gsheet(record: dict):
@@ -116,23 +111,6 @@ def save_to_gsheet(record: dict):
     except Exception as e:
         st.error(f"❌ Google Sheet 寫入失敗：{e}")
 
-def save_keylog_to_sheet2(user_id, keylog):
-    try:
-        info = json.loads(st.secrets["GOOGLE_SHEET_CREDENTIALS"])
-        scope = [
-            "https://spreadsheets.google.com/feeds",
-            "https://www.googleapis.com/auth/drive"
-        ]
-        creds = ServiceAccountCredentials.from_json_keyfile_dict(info, scope)
-        client = gspread.authorize(creds)
-        sheet2 = client.open("DNM-keystroke-log").worksheet("Sheet2")
-
-        row = [user_id, json.dumps(keylog, ensure_ascii=False)]
-        sheet2.append_row(row)
-        st.success("✅ 整包 keystroke JSON 已寫入 Sheet2！")
-    except Exception as e:
-        st.error(f"❌ Keystroke log 寫入失敗：{e}")
-
 # --- 送出資料 ---
 if st.button("📤 送出資料"):
     st.markdown("⏳ 資料傳送中...")
@@ -150,10 +128,23 @@ if st.button("📤 送出資料"):
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
     }
 
+    st.json(user_profile)
     save_to_gsheet(user_profile)
 
+    st.download_button(
+        label="⬇ 下載背景資料 JSON",
+        file_name="user_profile.json",
+        mime="application/json",
+        data=json.dumps(user_profile, ensure_ascii=False)
+    )
+
     if st.session_state.get("keylog_data"):
-        save_keylog_to_sheet2(user_id, st.session_state.keylog_data)
+        st.download_button(
+            label="⬇ 下載 keystroke log JSON",
+            file_name="keystroke_log.json",
+            mime="application/json",
+            data=json.dumps(st.session_state.keylog_data, ensure_ascii=False)
+        )
 
 st.markdown("---")
 st.caption("專題名稱：DNM-keystroke | Powered by Streamlit")
