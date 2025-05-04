@@ -85,9 +85,7 @@ components.html(
 )
 
 # --- 接收來自 postMessage 的資料 ---
-@st.experimental_singleton
-class JSReceiver:
-    value = []
+
 
 if st._is_running_with_streamlit:
     from streamlit.runtime.scriptrunner import get_script_run_ctx
