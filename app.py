@@ -120,6 +120,24 @@ def save_to_gsheet(record: dict):
     except Exception as e:
         st.error(f"❌ Google Sheet 寫入失敗：{e}")
 
+def save_keylog_to_sheet2(user_id, keylog):
+    try:
+        info = json.loads(st.secrets["GOOGLE_SHEET_CREDENTIALS"])
+        scope = [
+            "https://spreadsheets.google.com/feeds",
+            "https://www.googleapis.com/auth/drive"
+        ]
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(info, scope)
+        client = gspread.authorize(creds)
+        sheet2 = client.open("DNM-keystroke-log").get_worksheet(1)
+
+        for entry in keylog:
+            row = [user_id, entry['key'], entry['type'], entry['time']]
+            sheet2.append_row(row)
+        st.success("✅ 按鍵紀錄已寫入 Google Sheet 第二頁！")
+    except Exception as e:
+        st.error(f"❌ Keystroke log 寫入失敗：{e}")
+
 # --- 送出資料 ---
 if st.button("📤 送出資料"):
     st.markdown("⏳ 資料傳送中...")
@@ -154,6 +172,7 @@ if st.button("📤 送出資料"):
             mime="application/json",
             data=json.dumps(st.session_state.keylog_data, ensure_ascii=False)
         )
+        save_keylog_to_sheet2(user_id, st.session_state.keylog_data)
 
 st.markdown("---")
 st.caption("專題名稱：DNM-keystroke | Powered by Streamlit")
