@@ -6,6 +6,7 @@ import json
 import streamlit.components.v1 as components
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+import streamlit_javascript as stj
 
 st.set_page_config(page_title="Keystroke Dynamics Study", layout="centered")
 
@@ -43,15 +44,11 @@ sentence = "我每天都會使用電腦打字處理工作"
 st.markdown("---")
 st.markdown(f"## ✍️ 請輸入下列句子：\n\n**{sentence}**")
 
-# --- JS 元件 + 表單回傳方式收資料 ---
-keylog_json = st.text_input("👇 按下送出會自動填入", key="keylog_data_input", label_visibility="collapsed")
-
+# --- JS 元件 ---
+st.markdown("### 打字區")
 components.html("""
-<form onsubmit="handleSubmit(); return false;">
-  <textarea id='inputArea' rows='4' style='width: 100%; font-size: 20px;' placeholder='請輸入上方句子'></textarea>
-  <input type='hidden' id='keylogData'>
-  <button type='submit' style='margin-top: 10px; font-size: 18px;'>送出按鍵紀錄</button>
-</form>
+<textarea id='inputArea' rows='4' style='width: 100%; font-size: 20px;' placeholder='請輸入上方句子'></textarea>
+<button onclick="sendLog()" style='margin-top: 10px; font-size: 18px;'>送出按鍵紀錄</button>
 <script>
   const log = [];
   const input = document.getElementById('inputArea');
@@ -61,25 +58,34 @@ components.html("""
   input.addEventListener('keyup', e => {
     log.push({key: e.key, type: 'up', time: Date.now()});
   });
-  function handleSubmit() {
-    const result = JSON.stringify(log);
-    const streamlitInput = window.parent.document.querySelector('input[name="keylog_data_input"]');
-    if (streamlitInput) {
-      streamlitInput.value = result;
-      streamlitInput.dispatchEvent(new Event('input', { bubbles: true }));
-    }
+  function sendLog() {
+    const data = JSON.stringify(log);
+    const streamlitEvent = new CustomEvent("streamlit:message", {
+      detail: { type: "keylog_data", data: data }
+    });
+    window.parent.dispatchEvent(streamlitEvent);
   }
 </script>
 """, height=300)
 
-if keylog_json:
+# --- 透過 Streamlit 事件取得資料 ---
+result = stj.st_javascript("""
+new Promise((resolve) => {
+  window.addEventListener("streamlit:message", (e) => {
+    if (e.detail && e.detail.type === "keylog_data") {
+      resolve(e.detail.data);
+    }
+  });
+});
+""")
+
+if result:
     try:
-        st.write("📋 keylog_json 原始內容：", keylog_json)
-        st.session_state.keylog_data = json.loads(keylog_json)
+        st.session_state.keylog_data = json.loads(result)
         st.success("✅ Keystroke log 接收成功！")
         st.json(st.session_state.keylog_data)
-    except:
-        st.error("❌ JSON 格式錯誤，請確認格式")
+    except Exception as e:
+        st.error(f"❌ JSON 格式錯誤：{e}")
 
 # --- 寫入 Google Sheet ---
 def save_to_gsheet(record: dict):
@@ -163,4 +169,4 @@ if st.button("📤 送出資料"):
         save_keylog_to_sheet2(user_id, st.session_state.keylog_data)
 
 st.markdown("---")
-st.caption("專題名稱：DNM-keystroke | Powered by Streamlit")
+st.caption("專題名稱：DNM-keystroke | Powered by Str
