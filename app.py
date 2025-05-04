@@ -58,43 +58,37 @@ st.markdown("""
     log.push({key: e.key, type: 'up', time: Date.now()});
   });
   document.getElementById("sendBtn").addEventListener("click", () => {
-    const payload = JSON.stringify({ type: "keylog_data", data: JSON.stringify(log) });
-    window.parent.postMessage(payload, "*");
+    const event = new CustomEvent("streamlit:keystrokeData", {
+      detail: JSON.stringify(log)
+    });
+    window.dispatchEvent(event);
   });
 </script>
 """, unsafe_allow_html=True)
 
-# --- 初始化 keylog_data ---
 st.session_state.setdefault("keylog_data", [])
 
-# --- 接收 JS 回傳資料 ---
-result = stj.st_javascript(
-    """
-    new Promise((resolve) => {
-      window.addEventListener("message", (event) => {
-        try {
-          const payload = JSON.parse(event.data);
-          if (payload && payload.type === "keylog_data") {
-            resolve(payload.data);
-          }
-        } catch (e) {
-          // 忽略非 JSON 資料
-        }
-      });
-    });
-    """
-)
+if st.button("📩 送出按鍵紀錄"):
+    result = stj.st_javascript(
+        """
+        new Promise((resolve) => {
+          window.addEventListener("streamlit:keystrokeData", (event) => {
+            resolve(event.detail);
+          });
+        });
+        """
+    )
 
-if result is not None:
-    try:
-        parsed = json.loads(result)
-        if isinstance(parsed, list):
-            st.session_state["keylog_data"] = parsed
-            st.success("✅ 已接收按鍵資料")
-        else:
-            st.warning("⚠️ 資料格式錯誤（不是 list）")
-    except Exception as e:
-        st.warning(f"⚠️ 無法解析 keylog 資料：{e}")
+    if result:
+        try:
+            parsed = json.loads(result)
+            if isinstance(parsed, list):
+                st.session_state["keylog_data"] = parsed
+                st.success("✅ 已接收按鍵資料")
+            else:
+                st.warning("⚠️ 資料格式錯誤（不是 list）")
+        except Exception as e:
+            st.warning(f"⚠️ 無法解析 keylog 資料：{e}")
 
 # --- 寫入 Google Sheet ---
 def save_to_gsheet(record: dict):
@@ -142,7 +136,6 @@ def save_keylog_to_sheet2(user_id, keylog):
     except Exception as e:
         st.error(f"❌ Keystroke log 寫入失敗：{e}")
 
-# --- 送出資料 ---
 if st.button("📤 送出資料"):
     if not isinstance(st.session_state.get("keylog_data"), list) or len(st.session_state.get("keylog_data")) == 0:
         st.warning("⚠️ 請先按下『送出按鍵紀錄』，才能提交資料。")
@@ -167,4 +160,4 @@ if st.button("📤 送出資料"):
     save_keylog_to_sheet2(user_id, st.session_state["keylog_data"])
 
 st.markdown("---")
-st.caption("專題名稱：DNM-keystroke | Powered by Streamlit")
+st.caption("專題名稱：DNM-keystroke | Powe
