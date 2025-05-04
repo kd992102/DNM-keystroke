@@ -74,6 +74,7 @@ components.html("""
 
 if keylog_json:
     try:
+        st.write("📋 keylog_json 原始內容：", keylog_json)
         st.session_state.keylog_data = json.loads(keylog_json)
         st.success("✅ Keystroke log 接收成功！")
         st.json(st.session_state.keylog_data)
