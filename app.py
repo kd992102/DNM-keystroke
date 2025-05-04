@@ -4,7 +4,6 @@ import time
 import uuid
 import json
 import gspread
-import streamlit.components.v1 as components
 from oauth2client.service_account import ServiceAccountCredentials
 import streamlit_javascript as stj
 
@@ -46,49 +45,54 @@ st.markdown(f"## ✍️ 請輸入下列句子：\n\n**{sentence}**")
 
 # --- 輸入區與 JavaScript 偵測按鍵 ---
 st.markdown("### 打字區")
-if "keylog_data" not in st.session_state:
-    st.session_state.keylog_data = []
+st.markdown("""
+<textarea id="inputArea" rows="4" style="width:100%; font-size:20px;" placeholder="請輸入上方句子，系統將自動記錄按鍵時間..."></textarea>
+<button id="sendBtn" style="margin-top:10px; font-size:18px;">送出按鍵紀錄</button>
+<script>
+  const log = [];
+  const input = document.getElementById("inputArea");
+  input.addEventListener('keydown', e => {
+    log.push({key: e.key, type: 'down', time: Date.now()});
+  });
+  input.addEventListener('keyup', e => {
+    log.push({key: e.key, type: 'up', time: Date.now()});
+  });
+  document.getElementById("sendBtn").addEventListener("click", () => {
+    const event = new CustomEvent("streamlit:keystrokeData", {
+      detail: JSON.stringify(log)
+    });
+    window.dispatchEvent(event);
+  });
+</script>
+""", unsafe_allow_html=True)
 
-components.html(
-    f"""
-    <textarea id='inputArea' rows=3 style='width:100%; font-size:20px;' 
-        placeholder='請輸入上方句子，系統將自動記錄按鍵時間...'></textarea>
-    <button onclick="sendData()" style='margin-top:10px;'>送出按鍵紀錄</button>
-    <script>
-        const log = [];
-        const input = document.getElementById("inputArea");
+st.session_state.setdefault("keylog_data", [])
 
-        input.addEventListener('keydown', e => {{
-            log.push({{key: e.key, type: 'down', time: Date.now()}});
-        }});
-        input.addEventListener('keyup', e => {{
-            log.push({{key: e.key, type: 'up', time: Date.now()}});
-        }});
-
-        function sendData() {{
-            const payload = btoa(unescape(encodeURIComponent(JSON.stringify(log))));
-            window.location.href = window.location.pathname + "?keylog=" + payload;
-        }}
-    </script>
-    """,
-    height=200
+result = stj.st_javascript(
+    """
+    new Promise((resolve) => {
+      window.addEventListener("streamlit:keystrokeData", (event) => {
+        resolve(event.detail);
+      }, { once: true });
+    });
+    """
 )
 
-# --- 解碼 query_params 並儲存 keylog ---
-params = st.query_params
-if "keylog" in params:
-    try:
-        decoded = json.loads(urllib.parse.unquote(base64.b64decode(params["keylog"]).decode("utf-8")))
-        st.session_state.keylog_data = decoded
-    except:
-        st.warning("⚠️ 無法解析 keylog 資料。")
-
 if st.button("📩 送出按鍵紀錄"):
-    result = stj.st_javascript(
-        """
-        new Promise((resolve) => {
-          window.addEventListener("streamlit:keystrokeData", (event) => {
-            resolve(event.detail);
+    st.write("🔍 DEBUG result:", result)
+
+if result:
+        try:
+            parsed = json.loads(result)
+            if isinstance(parsed, list):
+                st.session_state["keylog_data"] = parsed
+                st.success("✅ 已接收按鍵資料")
+            else:
+                st.warning("⚠️ 資料格式錯誤（不是 list）")
+        except Exception as e:
+            st.warning(f"⚠️ 無法解析 keylog 資料：{e}")
+    else:
+        st.warning("⚠️ 未收到任何按鍵資料，請重試。")
           });
         });
         """
