@@ -51,18 +51,27 @@ st.markdown("""
 <script>
   const log = [];
   const input = document.getElementById("inputArea");
-  input.addEventListener('keydown', e => {
-    log.push({key: e.key, type: 'down', time: Date.now()});
-  });
-  input.addEventListener('keyup', e => {
-    log.push({key: e.key, type: 'up', time: Date.now()});
-  });
-  document.getElementById("sendBtn").addEventListener("click", () => {
-    const event = new CustomEvent("streamlit:keystrokeData", {
-      detail: JSON.stringify(log)
+
+  if (input) {
+    input.addEventListener('keydown', e => {
+      log.push({key: e.key, type: 'down', time: Date.now()});
     });
-    window.dispatchEvent(event);
-  });
+    input.addEventListener('keyup', e => {
+      log.push({key: e.key, type: 'up', time: Date.now()});
+    });
+  }
+
+  const btn = document.getElementById("sendBtn");
+  if (btn) {
+    btn.addEventListener("click", () => {
+      const payload = JSON.stringify(log);
+      console.log("🔁 keylog sent:", payload);
+      const event = new CustomEvent("streamlit:keystrokeData", {
+        detail: payload
+      });
+      window.dispatchEvent(event);
+    });
+  }
 </script>
 """, unsafe_allow_html=True)
 
