@@ -101,8 +101,8 @@ def save_to_gsheet(record: dict):
     		record["sentence"],
     		record["timestamp"]
 	]
-	st.write("📋 寫入 Google Sheet 的資料：", ordered)
-	sheet.append_row(ordered)
+        st.write("📋 寫入 Google Sheet 的資料：", ordered)
+        sheet.append_row(ordered)
         st.success("✅ 資料已成功寫入 Google Sheet！")
     except Exception as e:
         st.error(f"❌ Google Sheet 寫入失敗：{e}")
