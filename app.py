@@ -78,22 +78,23 @@ components.html(
 
 # --- 解碼 query_params 並儲存 keylog ---
 # 接收前端傳來的 keylog
-result = st_javascript("""
-new Promise((resolve) => {
-    window.addEventListener("message", (event) => {
-        if (event.data?.type === "keylog") {
-            resolve(event.data.data);
-        }
+if st.button("📤 接收按鍵紀錄"):
+    result = st_javascript("""
+    new Promise((resolve) => {
+        window.addEventListener("message", (event) => {
+            if (event.data?.type === "keylog") {
+                resolve(event.data.data);
+            }
+        });
     });
-});
-""")
+    """)
 
-if result:
-    try:
-        st.session_state.keylog_data = json.loads(result)
-        st.success("✅ 已成功接收 keystroke log")
-    except Exception as e:
-        st.error(f"⚠️ 解析失敗: {e}")
+    if result:
+        try:
+            st.session_state.keylog_data = json.loads(result)
+            st.success("✅ 已收到 keylog！")
+        except Exception as e:
+            st.error(f"⚠️ 解析失敗：{e}")
 
 # --- 寫入 Google Sheet ---
 def save_to_gsheet(record: dict):
