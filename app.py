@@ -81,7 +81,7 @@ result = stj.st_javascript(
 if st.button("📩 送出按鍵紀錄"):
     st.write("🔍 DEBUG result:", result)
 
-if result:
+    if result:
         try:
             parsed = json.loads(result)
             if isinstance(parsed, list):
@@ -93,21 +93,6 @@ if result:
             st.warning(f"⚠️ 無法解析 keylog 資料：{e}")
     else:
         st.warning("⚠️ 未收到任何按鍵資料，請重試。")
-          });
-        });
-        """
-    )
-
-    if result:
-        try:
-            parsed = json.loads(result)
-            if isinstance(parsed, list):
-                st.session_state["keylog_data"] = parsed
-                st.success("✅ 已接收按鍵資料")
-            else:
-                st.warning("⚠️ 資料格式錯誤（不是 list）")
-        except Exception as e:
-            st.warning(f"⚠️ 無法解析 keylog 資料：{e}")
 
 # --- 寫入 Google Sheet ---
 def save_to_gsheet(record: dict):
