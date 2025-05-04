@@ -68,7 +68,7 @@ st.markdown("""
 
 # --- 初始化 keylog_data ---
 if "keylog_data" not in st.session_state:
-    st.session_state["keylog_data"] = None
+    st.session_state["keylog_data"] = []
 
 # --- 接收 JS 回傳資料 ---
 result = stj.st_javascript(
@@ -142,7 +142,7 @@ def save_keylog_to_sheet2(user_id, keylog):
 
 # --- 送出資料 ---
 if st.button("📤 送出資料"):
-    if st.session_state.get("keylog_data") is None:
+    if not st.session_state.get("keylog_data"):
         st.warning("⚠️ 請先按下『送出按鍵紀錄』，才能提交資料。")
         st.stop()
 
