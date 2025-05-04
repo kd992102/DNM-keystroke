@@ -43,54 +43,42 @@ sentence = "我每天都會使用電腦打字處理工作"
 st.markdown("---")
 st.markdown(f"## ✍️ 請輸入下列句子：\n\n**{sentence}**")
 
-# --- JS 元件用來記錄按鍵並傳回 Streamlit ---
-keylog_data = components.html(
-    """
-    <textarea id='inputArea' rows='4' style='width: 100%; font-size: 20px;' placeholder='請輸入上方句子，系統將自動記錄按鍵時間...'></textarea>
-    <button onclick="sendLog()" style='margin-top: 10px; font-size: 18px;'>送出按鍵紀錄</button>
-    <script>
-        const log = [];
-        const textarea = document.getElementById('inputArea');
-        textarea.addEventListener('keydown', e => {
-            log.push({ key: e.key, type: 'down', time: Date.now() });
-        });
-        textarea.addEventListener('keyup', e => {
-            log.push({ key: e.key, type: 'up', time: Date.now() });
-        });
+# --- JS 元件 + 表單回傳方式收資料 ---
+keylog_json = st.text_input("👇 下方會自動填入 keystroke JSON（請勿手動輸入）", value="", key="keylog_input")
 
-        function sendLog() {
-            const payload = JSON.stringify(log);
-            const message = { type: 'keylog', data: payload };
-            window.parent.postMessage(message, '*');
-        }
-    </script>
-    """,
-    height=250
-)
+components.html("""
+<form onsubmit="handleSubmit(); return false;">
+  <textarea id='inputArea' rows='4' style='width: 100%; font-size: 20px;' placeholder='請輸入上方句子'></textarea>
+  <input type='hidden' id='keylogData'>
+  <button type='submit' style='margin-top: 10px; font-size: 18px;'>送出按鍵紀錄</button>
+</form>
+<script>
+  const log = [];
+  const input = document.getElementById('inputArea');
+  input.addEventListener('keydown', e => {
+    log.push({key: e.key, type: 'down', time: Date.now()});
+  });
+  input.addEventListener('keyup', e => {
+    log.push({key: e.key, type: 'up', time: Date.now()});
+  });
+  function handleSubmit() {
+    const result = JSON.stringify(log);
+    const streamlitInput = window.parent.document.querySelector("input[data-testid='stTextInput']");
+    if (streamlitInput) {
+      streamlitInput.value = result;
+      streamlitInput.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  }
+</script>
+""", height=300)
 
-# --- JS 資料接收區 ---
-from streamlit_javascript import st_javascript
-keylog_result = st_javascript("""
-    window.addEventListener("message", (event) => {
-        if (event.data && event.data.type === "keylog") {
-            window._receivedKeylog = event.data.data;
-        }
-    });
-    await new Promise(resolve => setTimeout(() => resolve(window._receivedKeylog || null), 1000));
-""")
-
-if keylog_result:
+if keylog_json:
     try:
-        parsed = json.loads(keylog_result)
-        st.session_state.keylog_data = parsed
-        st.success("✅ 已成功接收 keystroke log")
+        st.session_state.keylog_data = json.loads(keylog_json)
+        st.success("✅ Keystroke log 接收成功！")
+        st.json(st.session_state.keylog_data)
     except:
-        st.warning("⚠️ 接收到資料但格式錯誤")
-
-# --- 顯示 keylog JSON ---
-if "keylog_data" in st.session_state:
-    st.markdown("### 🔍 Keystroke JSON 紀錄")
-    st.json(st.session_state.keylog_data)
+        st.error("❌ JSON 格式錯誤，請確認格式")
 
 # --- 寫入 Google Sheet ---
 def save_to_gsheet(record: dict):
@@ -129,12 +117,11 @@ def save_keylog_to_sheet2(user_id, keylog):
         ]
         creds = ServiceAccountCredentials.from_json_keyfile_dict(info, scope)
         client = gspread.authorize(creds)
-        sheet2 = client.open("DNM-keystroke-log").get_worksheet(1)
+        sheet2 = client.open("DNM-keystroke-log").worksheet("Sheet2")
 
-        for entry in keylog:
-            row = [user_id, entry['key'], entry['type'], entry['time']]
-            sheet2.append_row(row)
-        st.success("✅ 按鍵紀錄已寫入 Google Sheet 第二頁！")
+        row = [user_id, json.dumps(keylog, ensure_ascii=False)]
+        sheet2.append_row(row)
+        st.success("✅ 整包 keystroke JSON 已寫入 Sheet2！")
     except Exception as e:
         st.error(f"❌ Keystroke log 寫入失敗：{e}")
 
