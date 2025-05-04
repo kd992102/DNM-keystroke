@@ -47,6 +47,7 @@ st.markdown(f"## ✍️ 請輸入下列句子：\n\n**{sentence}**")
 if "keylog_data" not in st.session_state:
     st.session_state.keylog_data = []
 
+# --- HTML + JS 前端輸入區 ---
 components.html(
     """
     <textarea id='inputArea' rows=3 style='width:100%; font-size:20px;' 
@@ -84,22 +85,9 @@ components.html(
     height=220
 )
 
-# --- 接收來自 postMessage 的資料 ---
-
-
-if st._is_running_with_streamlit:
-    from streamlit.runtime.scriptrunner import get_script_run_ctx
-    ctx = get_script_run_ctx()
-    if ctx and hasattr(ctx, "_uploaded_message") and ctx._uploaded_message:
-        try:
-            st.session_state.keylog_data = json.loads(ctx._uploaded_message)
-        except:
-            pass
-
 # --- 顯示 keylog JSON ---
-if st.session_state.keylog_data:
-    st.markdown("### 🔍 Keystroke JSON 紀錄")
-    st.json(st.session_state.keylog_data)
+st.markdown("### 🔍 Keystroke JSON 紀錄")
+st.json(st.session_state.keylog_data)
 
 # --- 寫入 Google Sheet ---
 def save_to_gsheet(record: dict):
