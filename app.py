@@ -3,6 +3,8 @@ import pandas as pd
 import time
 import uuid
 import json
+import base64
+import urllib.parse
 import streamlit.components.v1 as components
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
@@ -43,12 +45,12 @@ sentence = "我每天都會使用電腦打字處理工作"
 st.markdown("---")
 st.markdown(f"## ✍️ 請輸入下列句子：\n\n**{sentence}**")
 
-# --- 用 session_state 儲存 keylog ---
+# --- 用 session_state 儲存 keylog base64 傳回資料 ---
 if "keylog_data" not in st.session_state:
     st.session_state.keylog_data = []
 
 components.html(
-    """
+    f"""
     <textarea id='inputArea' rows=3 style='width:100%; font-size:20px;' 
         placeholder='請輸入上方句子，系統將自動記錄按鍵時間...'></textarea>
     <button onclick="sendData()" style='margin-top:10px;'>送出按鍵紀錄</button>
@@ -56,47 +58,30 @@ components.html(
         const log = [];
         const input = document.getElementById("inputArea");
 
-        input.addEventListener('keydown', e => {
-            log.push({key: e.key, type: 'down', time: Date.now()});
-        });
-        input.addEventListener('keyup', e => {
-            log.push({key: e.key, type: 'up', time: Date.now()});
-        });
+        input.addEventListener('keydown', e => {{
+            log.push({{key: e.key, type: 'down', time: Date.now()}});
+        }});
+        input.addEventListener('keyup', e => {{
+            log.push({{key: e.key, type: 'up', time: Date.now()}});
+        }});
 
-        function sendData() {
-            const payload = JSON.stringify(log);
-            const iframe = document.createElement('iframe');
-            iframe.style.display = 'none';
-            iframe.srcdoc = `<script>window.parent.postMessage(${payload}, '*');</script>`;
-            document.body.appendChild(iframe);
-        }
-
-        window.addEventListener("message", (event) => {
-            if (event.data && Array.isArray(event.data)) {
-                const textarea = document.createElement('textarea');
-                textarea.name = 'keylog';
-                textarea.value = JSON.stringify(event.data);
-                document.body.appendChild(textarea);
-            }
-        });
+        function sendData() {{
+            const payload = btoa(unescape(encodeURIComponent(JSON.stringify(log))));
+            window.location.href = window.location.pathname + "?keylog=" + payload;
+        }}
     </script>
     """,
-    height=220
+    height=200
 )
 
-# --- 接收來自 postMessage 的資料 ---
-@st.experimental_singleton
-class JSReceiver:
-    value = []
-
-if st._is_running_with_streamlit:
-    from streamlit.runtime.scriptrunner import get_script_run_ctx
-    ctx = get_script_run_ctx()
-    if ctx and hasattr(ctx, "_uploaded_message") and ctx._uploaded_message:
-        try:
-            st.session_state.keylog_data = json.loads(ctx._uploaded_message)
-        except:
-            pass
+# --- 解碼 query_params 並儲存 keylog ---
+params = st.query_params
+if "keylog" in params:
+    try:
+        decoded = json.loads(urllib.parse.unquote(base64.b64decode(params["keylog"]).decode("utf-8")))
+        st.session_state.keylog_data = decoded
+    except:
+        st.warning("⚠️ 無法解析 keylog 資料。")
 
 # --- 顯示 keylog JSON ---
 if st.session_state.keylog_data:
