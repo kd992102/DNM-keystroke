@@ -4,6 +4,8 @@ import time
 import uuid
 import json
 import streamlit.components.v1 as components
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
 st.set_page_config(page_title="Keystroke Dynamics Study", layout="centered")
 
@@ -41,11 +43,10 @@ sentence = "我每天都會使用電腦打字處理工作"
 st.markdown("---")
 st.markdown(f"## ✍️ 請輸入下列句子：\n\n**{sentence}**")
 
-# --- 前端輸入區與 keylogger JS ---
 components.html(
     """
-    <textarea id="inputArea" rows=3 style="width:100%; font-size:20px;"
-        placeholder="請輸入上方句子，系統將自動記錄按鍵時間..."></textarea>
+    <textarea id=\"inputArea\" rows=3 style=\"width:100%; font-size:20px;\" 
+        placeholder=\"請輸入上方句子，系統將自動記錄按鍵時間...\"></textarea>
     <script>
         const log = [];
         const input = document.getElementById("inputArea");
@@ -78,10 +79,24 @@ components.html(
 )
 
 st.markdown("---")
+
+def save_to_gsheet(record: dict):
+    try:
+        info = json.loads(st.secrets["GOOGLE_SHEET_CREDENTIALS"])
+        scope = [
+            "https://spreadsheets.google.com/feeds",
+            "https://www.googleapis.com/auth/drive"
+        ]
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(info, scope)
+        client = gspread.authorize(creds)
+        sheet = client.open("DNM-keystroke-log").sheet1
+        sheet.append_row(list(record.values()))
+        st.success("✅ 資料已成功寫入 Google Sheet！")
+    except Exception as e:
+        st.error(f"❌ Google Sheet 寫入失敗：{e}")
+
 if st.button("📤 送出資料"):
     st.markdown("⏳ 資料傳送中...")
-    # 模擬資料抓取（實作上需透過 postMessage 機制與 JS 溝通）
-    st.warning("🔧 注意：目前範例尚未實作 JS 回傳 keylog，請手動整合。")
 
     user_profile = {
         "user_id": user_id,
@@ -94,8 +109,9 @@ if st.button("📤 送出資料"):
         "sentence": sentence,
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
     }
+
     st.json(user_profile)
-    st.success("✔️ 資料結構正確，可整合存入 Google Sheet 或 CSV")
+    save_to_gsheet(user_profile)
 
     st.download_button(
         label="⬇ 下載背景資料 JSON",
