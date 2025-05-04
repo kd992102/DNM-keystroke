@@ -6,6 +6,7 @@ import json
 import streamlit.components.v1 as components
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+from streamlit_javascript import st_javascript
 
 st.set_page_config(page_title="Keystroke Dynamics Study", layout="centered")
 
@@ -43,43 +44,48 @@ sentence = "我每天都會使用電腦打字處理工作"
 st.markdown("---")
 st.markdown(f"## ✍️ 請輸入下列句子：\n\n**{sentence}**")
 
-# --- 前端打字區與 keylogger ---
-components.html(
-    """
-    <textarea id='inputArea' rows='4' style='width: 100%; font-size: 20px;' placeholder='請輸入上方句子，系統將自動記錄按鍵時間...'></textarea>
-    <button onclick="sendData()" style='margin-top: 10px; font-size: 18px;'>送出按鍵紀錄</button>
-    <script>
-        const log = [];
-        const input = document.getElementById("inputArea");
-        input.addEventListener('keydown', e => {
-            log.push({key: e.key, type: 'down', time: Date.now()});
-        });
-        input.addEventListener('keyup', e => {
-            log.push({key: e.key, type: 'up', time: Date.now()});
-        });
+# --- 用 session_state 儲存 keylog ---
+if "keylog_data" not in st.session_state:
+    st.session_state.keylog_data = []
 
-        function sendData() {
-            const payload = JSON.stringify(log);
-            const encoded = encodeURIComponent(payload);
-            window.location.search = '?keylog=' + encoded;
-        }
-    </script>
-    """,
-    height=200
+# --- 直接用 st_javascript 插入 HTML 與 JS 並即時回傳 log ---
+keylog_data = st_javascript(
+    """
+    const textarea = document.createElement('textarea');
+    textarea.rows = 4;
+    textarea.style.width = '100%';
+    textarea.style.fontSize = '20px';
+    textarea.placeholder = '請輸入上方句子，系統將自動記錄按鍵時間...';
+    document.body.appendChild(textarea);
+
+    const log = [];
+    textarea.addEventListener('keydown', e => {
+        log.push({key: e.key, type: 'down', time: Date.now()});
+    });
+    textarea.addEventListener('keyup', e => {
+        log.push({key: e.key, type: 'up', time: Date.now()});
+    });
+
+    const button = document.createElement('button');
+    button.innerText = '送出按鍵紀錄';
+    button.style.marginTop = '10px';
+    button.style.fontSize = '18px';
+    button.onclick = () => {
+        window.dispatchEvent(new CustomEvent('streamlit:sendData', { detail: log }));
+    };
+    document.body.appendChild(button);
+
+    return await new Promise((resolve) => {
+        window.addEventListener('streamlit:sendData', (event) => resolve(event.detail), { once: true });
+    });
+    """
 )
 
-# --- 用 session_state 儲存 keylog ---
-from urllib.parse import unquote
-params = st.query_params
-if "keylog" in params:
-    try:
-        st.session_state.keylog_data = json.loads(unquote(params["keylog"]))
-        st.success("✅ 已接收 keystroke log 資料")
-    except:
-        st.warning("⚠️ 無法解析 keylog 資料")
+if keylog_data:
+    st.session_state.keylog_data = keylog_data
 
 # --- 顯示 keylog JSON ---
-if "keylog_data" in st.session_state and st.session_state.keylog_data:
+if st.session_state.keylog_data:
     st.markdown("### 🔍 Keystroke JSON 紀錄")
     st.json(st.session_state.keylog_data)
 
@@ -138,7 +144,7 @@ if st.button("📤 送出資料"):
         data=json.dumps(user_profile, ensure_ascii=False)
     )
 
-    if st.session_state.get("keylog_data"):
+    if st.session_state.keylog_data:
         st.download_button(
             label="⬇ 下載 keystroke log JSON",
             file_name="keystroke_log.json",
