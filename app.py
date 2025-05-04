@@ -3,6 +3,8 @@ import pandas as pd
 import time
 import uuid
 import json
+import base64
+import urllib.parse
 import streamlit.components.v1 as components
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
@@ -43,7 +45,7 @@ sentence = "我每天都會使用電腦打字處理工作"
 st.markdown("---")
 st.markdown(f"## ✍️ 請輸入下列句子：\n\n**{sentence}**")
 
-# --- 用 session_state 儲存 JS 回傳的 keylog 資料 ---
+# --- 用 session_state 儲存 keylog base64 傳回資料 ---
 if "keylog_data" not in st.session_state:
     st.session_state.keylog_data = []
 
@@ -51,6 +53,7 @@ components.html(
     f"""
     <textarea id='inputArea' rows=3 style='width:100%; font-size:20px;' 
         placeholder='請輸入上方句子，系統將自動記錄按鍵時間...'></textarea>
+    <button onclick="sendData()" style='margin-top:10px;'>送出按鍵紀錄</button>
     <script>
         const log = [];
         const input = document.getElementById("inputArea");
@@ -62,28 +65,28 @@ components.html(
             log.push({{key: e.key, type: 'up', time: Date.now()}});
         }});
 
-        window.addEventListener("message", (event) => {{
-            if (event.data === "submit") {{
-                const payload = JSON.stringify(log);
-                const iframe = document.createElement('iframe');
-                iframe.setAttribute('srcdoc', `<script>window.parent.postMessage(${{payload}}, '*');</script>`);
-                document.body.appendChild(iframe);
-            }}
-        }});
+        function sendData() {{
+            const payload = btoa(unescape(encodeURIComponent(JSON.stringify(log))));
+            window.location.href = window.location.pathname + "?keylog=" + payload;
+        }}
     </script>
     """,
-    height=150
+    height=200
 )
 
-# --- 接收前端 postMessage 傳來的資料 ---
-def handle_js_event():
-    js_event = st.query_params.get("keylog")
-    if js_event:
-        try:
-            st.session_state.keylog_data = json.loads(js_event[0])
-        except:
-            pass
-handle_js_event()
+# --- 解碼 query_params 並儲存 keylog ---
+params = st.query_params
+if "keylog" in params:
+    try:
+        decoded = json.loads(urllib.parse.unquote(base64.b64decode(params["keylog"]).decode("utf-8")))
+        st.session_state.keylog_data = decoded
+    except:
+        st.warning("⚠️ 無法解析 keylog 資料。")
+
+# --- 顯示 keylog JSON ---
+if st.session_state.keylog_data:
+    st.markdown("### 🔍 Keystroke JSON 紀錄")
+    st.json(st.session_state.keylog_data)
 
 # --- 寫入 Google Sheet ---
 def save_to_gsheet(record: dict):
@@ -112,11 +115,6 @@ def save_to_gsheet(record: dict):
         st.success("✅ 背景資料已成功寫入 Google Sheet！")
     except Exception as e:
         st.error(f"❌ Google Sheet 寫入失敗：{e}")
-
-# --- 顯示 keylog JSON ---
-if st.session_state.keylog_data:
-    st.markdown("### 🔍 Keystroke JSON 紀錄")
-    st.json(st.session_state.keylog_data)
 
 # --- 送出資料 ---
 if st.button("📤 送出資料"):
