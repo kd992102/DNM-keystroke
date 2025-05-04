@@ -36,13 +36,15 @@ with col1:
 with col2:
     dominant_hand = st.radio("慣用手", ["左手", "右手", "雙手皆可"])
     typing_exp = st.selectbox("每日打字時間", ["<1 小時", "1-3 小時", ">3 小時"])
-    keyboard_type = st.selectbox("鍵盤類型", ["機械式", "薄膜式", "不確定"])
+    device_type = st.selectbox("目前使用的裝置", ["手機", "平板", "筆電", "桌機"])
 
 user_id = str(uuid.uuid4())[:8]
 sentence = "我每天都會使用電腦打字處理工作"
 st.markdown("---")
 st.markdown(f"## ✍️ 請輸入下列句子：\n\n**{sentence}**")
 
+# 加入 keylogger script 並透過 window.postMessage 傳給 Python
+keylog_placeholder = st.empty()
 components.html(
     """
     <textarea id=\"inputArea\" rows=3 style=\"width:100%; font-size:20px;\" 
@@ -51,73 +53,75 @@ components.html(
         const log = [];
         const input = document.getElementById("inputArea");
 
-        input.addEventListener('keydown', e => {{
-            log.push({{
+        input.addEventListener('keydown', e => {
+            log.push({
                 key: e.key,
                 type: 'down',
                 time: Date.now()
-            }});
-        }});
+            });
+        });
 
-        input.addEventListener('keyup', e => {{
-            log.push({{
+        input.addEventListener('keyup', e => {
+            log.push({
                 key: e.key,
                 type: 'up',
                 time: Date.now()
-            }});
-        }});
+            });
+        });
 
-        window.addEventListener("message", (event) => {{
-            if (event.data === "get_log") {{
-                const result = JSON.stringify(log);
-                window.parent.postMessage(result, "*");
-            }}
-        }});
+        const sendLog = () => {
+            const logData = JSON.stringify(log);
+            const iframe = document.createElement('iframe');
+            iframe.setAttribute('srcdoc', `<script>window.parent.postMessage(${JSON.stringify(log)}, '*');</script>`);
+            document.body.appendChild(iframe);
+        }
+
+        window.addEventListener("message", (event) => {
+            if (event.data === "submit") {
+                sendLog();
+            }
+        });
     </script>
     """,
     height=150
 )
 
-st.markdown("---")
-
+# --- 寫入 Google Sheet ---
 def save_to_gsheet(record: dict):
     try:
         info = json.loads(st.secrets["GOOGLE_SHEET_CREDENTIALS"])
-        st.write("讀取金鑰成功")
         scope = [
             "https://spreadsheets.google.com/feeds",
             "https://www.googleapis.com/auth/drive"
         ]
         creds = ServiceAccountCredentials.from_json_keyfile_dict(info, scope)
         client = gspread.authorize(creds)
-        st.write("綁定金鑰成功")
-        sheet_list = client.openall()
-        for s in sheet_list:
-            st.write("找到表單：", s.title)
-        sheet = client.open("DNM-keystroke-log").sheet1
-        try:
-            st.write("成功連結sheet")
-        except Exception as e:
-            st.error(f"❌ 連結 Google Sheet 失敗：{e}")
+        sheet = client.open("DNM-keystoke-log").sheet1
+
         ordered = [
-    		record["user_id"],
-    		record["gender"],
-    		record["age"],
-    		record["education"],
-    		record["dominant_hand"],
-    		record["typing_exp"],
-    		record["keyboard_type"],
-    		record["sentence"],
-    		record["timestamp"]
-	]
-        st.write("📋 寫入 Google Sheet 的資料：", ordered)
+            record["user_id"],
+            record["gender"],
+            record["age"],
+            record["education"],
+            record["dominant_hand"],
+            record["typing_exp"],
+            record["device_type"],
+            record["sentence"],
+            record["timestamp"]
+        ]
         sheet.append_row(ordered)
-        st.success("✅ 資料已成功寫入 Google Sheet！")
+        st.success("✅ 背景資料已成功寫入 Google Sheet！")
     except Exception as e:
         st.error(f"❌ Google Sheet 寫入失敗：{e}")
 
+# --- 傳遞 log 用 callback ---
+keylog = st.text_area("🔍 Keystroke JSON 紀錄（開發用）", "", height=150)
+
 if st.button("📤 送出資料"):
     st.markdown("⏳ 資料傳送中...")
+    st.experimental_set_query_params()
+    st.markdown("<script>window.postMessage(\"submit\", \"*\")</script>", unsafe_allow_html=True)
+    time.sleep(1.5)
 
     user_profile = {
         "user_id": user_id,
@@ -126,7 +130,7 @@ if st.button("📤 送出資料"):
         "education": education,
         "dominant_hand": dominant_hand,
         "typing_exp": typing_exp,
-        "keyboard_type": keyboard_type,
+        "device_type": device_type,
         "sentence": sentence,
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
     }
