@@ -60,10 +60,7 @@ components.html("""
   });
   function sendLog() {
     const data = JSON.stringify(log);
-    const streamlitEvent = new CustomEvent("streamlit:message", {
-      detail: { type: "keylog_data", data: data }
-    });
-    window.parent.dispatchEvent(streamlitEvent);
+    window.parent.postMessage({ type: "keylog_data", data: data }, "*");
   }
 </script>
 """, height=300)
@@ -71,9 +68,9 @@ components.html("""
 # --- 透過 Streamlit 事件取得資料 ---
 result = stj.st_javascript("""
 new Promise((resolve) => {
-  window.addEventListener("streamlit:message", (e) => {
-    if (e.detail && e.detail.type === "keylog_data") {
-      resolve(e.detail.data);
+  window.addEventListener("message", (e) => {
+    if (e.data && e.data.type === "keylog_data") {
+      resolve(e.data.data);
     }
   });
 });
@@ -82,8 +79,6 @@ new Promise((resolve) => {
 if result:
     try:
         st.session_state.keylog_data = json.loads(result)
-        st.success("✅ Keystroke log 接收成功！")
-        st.json(st.session_state.keylog_data)
     except Exception as e:
         st.error(f"❌ JSON 格式錯誤：{e}")
 
@@ -149,23 +144,9 @@ if st.button("📤 送出資料"):
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
     }
 
-    st.json(user_profile)
     save_to_gsheet(user_profile)
 
-    st.download_button(
-        label="⬇ 下載背景資料 JSON",
-        file_name="user_profile.json",
-        mime="application/json",
-        data=json.dumps(user_profile, ensure_ascii=False)
-    )
-
     if st.session_state.get("keylog_data"):
-        st.download_button(
-            label="⬇ 下載 keystroke log JSON",
-            file_name="keystroke_log.json",
-            mime="application/json",
-            data=json.dumps(st.session_state.keylog_data, ensure_ascii=False)
-        )
         save_keylog_to_sheet2(user_id, st.session_state.keylog_data)
 
 st.markdown("---")
