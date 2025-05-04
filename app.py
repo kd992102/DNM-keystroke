@@ -160,4 +160,4 @@ if st.button("📤 送出資料"):
     save_keylog_to_sheet2(user_id, st.session_state["keylog_data"])
 
 st.markdown("---")
-st.caption("專題名稱：DNM-keystroke | Powe
+st.caption("專題名稱：DNM-keystroke | Powered by Streamlit")
