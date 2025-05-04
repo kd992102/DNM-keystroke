@@ -45,67 +45,52 @@ st.markdown(f"## ✍️ 請輸入下列句子：\n\n**{sentence}**")
 
 # --- 輸入區與 JavaScript 偵測按鍵 ---
 st.markdown("### 打字區")
-if st.button("▶️ 開始測驗"):
-    st.markdown("""
-    <textarea id="inputArea" rows="4" style="width:100%; font-size:20px;" placeholder="請輸入上方句子，系統將自動記錄按鍵時間..."></textarea>
-    <button id="sendBtn" style="margin-top:10px; font-size:18px;">送出按鍵紀錄</button>
-    <script>
-      const log = [];
-      setTimeout(() => {
-        const input = document.getElementById("inputArea");
-        const btn = document.getElementById("sendBtn");
+result = stj.st_javascript("""
+const container = document.createElement('div');
 
-        if (input) {
-          input.addEventListener('keydown', e => {
-            log.push({key: e.key, type: 'down', time: Date.now()});
-          });
-          input.addEventListener('keyup', e => {
-            log.push({key: e.key, type: 'up', time: Date.now()});
-          });
-        }
+const input = document.createElement('textarea');
+input.rows = 4;
+input.placeholder = '請輸入上方句子';
+input.id = 'inputArea';
+input.style.width = '100%';
+input.style.fontSize = '20px';
+container.appendChild(input);
 
-        if (btn) {
-          btn.addEventListener("click", () => {
-            const payload = JSON.stringify(log);
-            const event = new CustomEvent("streamlit:keystrokeData", {
-              detail: payload
-            });
-            window.dispatchEvent(event);
-          });
-        } else {
-          console.error("❌ 找不到送出按鈕 sendBtn");
-        }
-      }, 500);
-    </script>
-    """, unsafe_allow_html=True)
+const button = document.createElement('button');
+button.innerText = '送出按鍵紀錄';
+button.style.marginTop = '10px';
+button.style.fontSize = '18px';
+container.appendChild(button);
 
-st.session_state.setdefault("keylog_data", [])
+document.body.appendChild(container);
 
-result = stj.st_javascript(
-    """
-    new Promise((resolve) => {
-      window.addEventListener("streamlit:keystrokeData", (event) => {
-        resolve(event.detail);
-      }, { once: true });
-    });
-    """
-)
+const log = [];
+input.addEventListener('keydown', e => {
+  log.push({ key: e.key, type: 'down', time: Date.now() });
+});
+input.addEventListener('keyup', e => {
+  log.push({ key: e.key, type: 'up', time: Date.now() });
+});
 
-if st.button("📩 送出按鍵紀錄"):
-    st.write("🔍 DEBUG result:", result)
+return new Promise((resolve) => {
+  button.addEventListener('click', () => {
+    resolve(JSON.stringify(log));
+  });
+});
+""")
 
-    if result:
-        try:
-            parsed = json.loads(result)
-            if isinstance(parsed, list):
-                st.session_state["keylog_data"] = parsed
-                st.success("✅ 已接收按鍵資料")
-            else:
-                st.warning("⚠️ 資料格式錯誤（不是 list）")
-        except Exception as e:
-            st.warning(f"⚠️ 無法解析 keylog 資料：{e}")
-    else:
-        st.warning("⚠️ 未收到任何按鍵資料，請重試。")
+if result:
+    try:
+        parsed = json.loads(result)
+        if isinstance(parsed, list):
+            st.session_state["keylog_data"] = parsed
+            st.success("✅ 已接收按鍵資料")
+        else:
+            st.warning("⚠️ 資料格式錯誤（不是 list）")
+    except Exception as e:
+        st.warning(f"⚠️ 無法解析 keylog 資料：{e}")
+else:
+    st.warning("⚠️ 尚未收到任何按鍵紀錄")
 
 # --- 寫入 Google Sheet ---
 def save_to_gsheet(record: dict):
