@@ -49,8 +49,8 @@ st.markdown("""
 <textarea id="inputArea" rows="4" style="width:100%; font-size:20px;" placeholder="請輸入上方句子，系統將自動記錄按鍵時間..."></textarea>
 <button id="sendBtn" style="margin-top:10px; font-size:18px;">送出按鍵紀錄</button>
 <script>
-  document.addEventListener("DOMContentLoaded", () => {
-    const log = [];
+  const log = [];
+  window.addEventListener("load", () => {
     const input = document.getElementById("inputArea");
     const btn = document.getElementById("sendBtn");
 
@@ -65,8 +65,10 @@ st.markdown("""
 
     if (btn) {
       btn.addEventListener("click", () => {
+        const payload = JSON.stringify(log);
+        console.log("📤 Sending keylog:", payload);
         const event = new CustomEvent("streamlit:keystrokeData", {
-          detail: JSON.stringify(log)
+          detail: payload
         });
         window.dispatchEvent(event);
       });
@@ -74,8 +76,7 @@ st.markdown("""
       console.error("❌ 找不到送出按鈕 sendBtn");
     }
   });
-</script>
-""", unsafe_allow_html=True)
+</script>""", unsafe_allow_html=True)
 
 st.session_state.setdefault("keylog_data", [])
 
