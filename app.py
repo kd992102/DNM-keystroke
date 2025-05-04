@@ -44,49 +44,51 @@ st.markdown("---")
 st.markdown(f"## ✍️ 請輸入下列句子：\n\n**{sentence}**")
 
 # --- JS 元件用來記錄按鍵並傳回 Streamlit ---
-keylog_receiver = components.html(
+keylog_data = components.html(
     """
     <textarea id='inputArea' rows='4' style='width: 100%; font-size: 20px;' placeholder='請輸入上方句子，系統將自動記錄按鍵時間...'></textarea>
-    <button onclick="sendData()" style='margin-top: 10px; font-size: 18px;'>送出按鍵紀錄</button>
+    <button onclick="sendLog()" style='margin-top: 10px; font-size: 18px;'>送出按鍵紀錄</button>
     <script>
         const log = [];
-        const input = document.getElementById("inputArea");
-        input.addEventListener('keydown', e => {
-            log.push({key: e.key, type: 'down', time: Date.now()});
+        const textarea = document.getElementById('inputArea');
+        textarea.addEventListener('keydown', e => {
+            log.push({ key: e.key, type: 'down', time: Date.now() });
         });
-        input.addEventListener('keyup', e => {
-            log.push({key: e.key, type: 'up', time: Date.now()});
+        textarea.addEventListener('keyup', e => {
+            log.push({ key: e.key, type: 'up', time: Date.now() });
         });
 
-        function sendData() {
+        function sendLog() {
             const payload = JSON.stringify(log);
-            const iframe = document.createElement('iframe');
-            iframe.style.display = 'none';
-            iframe.srcdoc = `<script>window.parent.postMessage(${payload}, '*');<\/script>`;
-            document.body.appendChild(iframe);
+            const message = { type: 'keylog', data: payload };
+            window.parent.postMessage(message, '*');
         }
     </script>
     """,
-    height=200
+    height=250
 )
 
-# --- JS 資料接收 ---
+# --- JS 資料接收區 ---
 from streamlit_javascript import st_javascript
-result = st_javascript("""
+keylog_result = st_javascript("""
     window.addEventListener("message", (event) => {
-        if (event.data && Array.isArray(event.data)) {
-            window._streamlitKeylog = event.data;
+        if (event.data && event.data.type === "keylog") {
+            window._receivedKeylog = event.data.data;
         }
     });
-    await new Promise(resolve => setTimeout(() => resolve(window._streamlitKeylog || []), 1000));
+    await new Promise(resolve => setTimeout(() => resolve(window._receivedKeylog || null), 1000));
 """)
 
-if result:
-    st.session_state.keylog_data = result
-    st.success("✅ 已接收 keystroke log 資料")
+if keylog_result:
+    try:
+        parsed = json.loads(keylog_result)
+        st.session_state.keylog_data = parsed
+        st.success("✅ 已成功接收 keystroke log")
+    except:
+        st.warning("⚠️ 接收到資料但格式錯誤")
 
 # --- 顯示 keylog JSON ---
-if "keylog_data" in st.session_state and st.session_state.keylog_data:
+if "keylog_data" in st.session_state:
     st.markdown("### 🔍 Keystroke JSON 紀錄")
     st.json(st.session_state.keylog_data)
 
