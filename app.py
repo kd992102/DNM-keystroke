@@ -77,7 +77,7 @@ components.html(
 
 # --- 接收前端 postMessage 傳來的資料 ---
 def handle_js_event():
-    js_event = st.experimental_get_query_params().get("keylog")
+    js_event = st.query_params.get("keylog")
     if js_event:
         try:
             st.session_state.keylog_data = json.loads(js_event[0])
