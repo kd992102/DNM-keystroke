@@ -45,10 +45,15 @@ st.markdown(f"## ✍️ 請輸入下列句子：\n\n**{sentence}**")
 
 # --- 輸入區與 JavaScript 偵測按鍵 ---
 st.markdown("### 打字區")
-st.markdown("""
-<textarea id="inputArea" rows="4" style="width:100%; font-size:20px;" placeholder="請輸入上方句子，系統將自動記錄按鍵時間..."></textarea>
-<button onclick="sendData()" style='margin-top:10px;'>送出按鍵紀錄</button>
-<script>
+if "keylog_data" not in st.session_state:
+    st.session_state.keylog_data = []
+
+components.html(
+    f"""
+    <textarea id='inputArea' rows=3 style='width:100%; font-size:20px;' 
+        placeholder='請輸入上方句子，系統將自動記錄按鍵時間...'></textarea>
+    <button onclick="sendData()" style='margin-top:10px;'>送出按鍵紀錄</button>
+    <script>
         const log = [];
         const input = document.getElementById("inputArea");
 
@@ -64,9 +69,18 @@ st.markdown("""
             window.location.href = window.location.pathname + "?keylog=" + payload;
         }}
     </script>
-""", unsafe_allow_html=True)
+    """,
+    height=200
+)
 
-st.session_state.setdefault("keylog_data", [])
+# --- 解碼 query_params 並儲存 keylog ---
+params = st.query_params
+if "keylog" in params:
+    try:
+        decoded = json.loads(urllib.parse.unquote(base64.b64decode(params["keylog"]).decode("utf-8")))
+        st.session_state.keylog_data = decoded
+    except:
+        st.warning("⚠️ 無法解析 keylog 資料。")
 
 if st.button("📩 送出按鍵紀錄"):
     result = stj.st_javascript(
