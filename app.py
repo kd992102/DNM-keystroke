@@ -60,9 +60,7 @@ components.html("""
   });
   function sendLog() {
     const data = JSON.stringify(log);
-    if (window.streamlitReceiveMessage) {
-      window.streamlitReceiveMessage({ type: "keylog_data", data: data });
-    }
+    window.parent.postMessage({ type: "keylog_data", data: data }, "*");
   }
 </script>
 """, height=300)
@@ -71,17 +69,18 @@ components.html("""
 result = stj.st_javascript(
     """
     new Promise((resolve) => {
-      window.streamlitReceiveMessage = (data) => {
-        if (data && data.type === "keylog_data") {
-          resolve(data.data);
+      window.addEventListener("message", (e) => {
+        if (e.data && e.data.type === "keylog_data") {
+          resolve(e.data.data);
         }
-      };
+      });
     });
     """
 )
 
 if result:
     try:
+        st.success("result不為空")
         keylog_parsed = json.loads(result)
         st.session_state["keylog_data"] = keylog_parsed
     except Exception as e:
