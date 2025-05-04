@@ -47,23 +47,23 @@ st.markdown(f"## ✍️ 請輸入下列句子：\n\n**{sentence}**")
 st.markdown("### 打字區")
 st.markdown("""
 <textarea id="inputArea" rows="4" style="width:100%; font-size:20px;" placeholder="請輸入上方句子，系統將自動記錄按鍵時間..."></textarea>
-<button id="sendBtn" style="margin-top:10px; font-size:18px;">送出按鍵紀錄</button>
+<button onclick="sendData()" style='margin-top:10px;'>送出按鍵紀錄</button>
 <script>
-  const log = [];
-  const input = document.getElementById("inputArea");
-  input.addEventListener('keydown', e => {
-    log.push({key: e.key, type: 'down', time: Date.now()});
-  });
-  input.addEventListener('keyup', e => {
-    log.push({key: e.key, type: 'up', time: Date.now()});
-  });
-  document.getElementById("sendBtn").addEventListener("click", () => {
-    const event = new CustomEvent("streamlit:keystrokeData", {
-      detail: JSON.stringify(log)
-    });
-    window.dispatchEvent(event);
-  });
-</script>
+        const log = [];
+        const input = document.getElementById("inputArea");
+
+        input.addEventListener('keydown', e => {{
+            log.push({{key: e.key, type: 'down', time: Date.now()}});
+        }});
+        input.addEventListener('keyup', e => {{
+            log.push({{key: e.key, type: 'up', time: Date.now()}});
+        }});
+
+        function sendData() {{
+            const payload = btoa(unescape(encodeURIComponent(JSON.stringify(log))));
+            window.location.href = window.location.pathname + "?keylog=" + payload;
+        }}
+    </script>
 """, unsafe_allow_html=True)
 
 st.session_state.setdefault("keylog_data", [])
