@@ -44,7 +44,7 @@ st.markdown("---")
 st.markdown(f"## ✍️ 請輸入下列句子：\n\n**{sentence}**")
 
 # --- JS 元件 + 表單回傳方式收資料 ---
-keylog_json = st.text_input("👇 下方會自動填入 keystroke JSON（請勿手動輸入）", value="", key="keylog_input")
+keylog_json = st.text_input("👇 按下送出會自動填入", key="keylog_data_input", label_visibility="collapsed")
 
 components.html("""
 <form onsubmit="handleSubmit(); return false;">
@@ -63,7 +63,7 @@ components.html("""
   });
   function handleSubmit() {
     const result = JSON.stringify(log);
-    const streamlitInput = window.parent.document.querySelector("input[data-testid='stTextInput']");
+    const streamlitInput = window.parent.document.querySelector('input[name="keylog_data_input"]');
     if (streamlitInput) {
       streamlitInput.value = result;
       streamlitInput.dispatchEvent(new Event('input', { bubbles: true }));
