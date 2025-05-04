@@ -58,22 +58,26 @@ st.markdown("""
     log.push({key: e.key, type: 'up', time: Date.now()});
   });
   document.getElementById("sendBtn").addEventListener("click", () => {
-    const event = new CustomEvent("streamlit:keystrokeData", {
-      detail: JSON.stringify(log)
-    });
-    window.dispatchEvent(event);
+    const encoded = JSON.stringify(log);
+    if (window.streamlitReceiveMessage) {
+      window.streamlitReceiveMessage({ type: "keylog_data", data: encoded });
+    }
   });
 </script>
 """, unsafe_allow_html=True)
 
+# --- 初始化 keylog_data ---
 st.session_state.setdefault("keylog_data", [])
 
+# --- 接收 JS 回傳資料 ---
 result = stj.st_javascript(
     """
     new Promise((resolve) => {
-      window.addEventListener("streamlit:keystrokeData", (event) => {
-        resolve(event.detail);
-      });
+      window.streamlitReceiveMessage = (payload) => {
+        if (payload && payload.type === "keylog_data") {
+          resolve(payload.data);
+        }
+      };
     });
     """
 )
@@ -135,6 +139,7 @@ def save_keylog_to_sheet2(user_id, keylog):
     except Exception as e:
         st.error(f"❌ Keystroke log 寫入失敗：{e}")
 
+# --- 送出資料 ---
 if st.button("📤 送出資料"):
     if not isinstance(st.session_state.get("keylog_data"), list) or len(st.session_state.get("keylog_data")) == 0:
         st.warning("⚠️ 請先按下『送出按鍵紀錄』，才能提交資料。")
