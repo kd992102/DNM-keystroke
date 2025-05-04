@@ -6,7 +6,6 @@ import json
 import streamlit.components.v1 as components
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-from streamlit_javascript import st_javascript
 
 st.set_page_config(page_title="Keystroke Dynamics Study", layout="centered")
 
@@ -44,39 +43,47 @@ sentence = "我每天都會使用電腦打字處理工作"
 st.markdown("---")
 st.markdown(f"## ✍️ 請輸入下列句子：\n\n**{sentence}**")
 
-# --- 使用者輸入框與 keylogger ---
+# --- 用 session_state 儲存 JS 回傳的 keylog 資料 ---
+if "keylog_data" not in st.session_state:
+    st.session_state.keylog_data = []
+
 components.html(
-    """
-    <textarea id=\"inputArea\" rows=3 style=\"width:100%; font-size:20px;\" 
-        placeholder=\"請輸入上方句子，系統將自動記錄按鍵時間...\"></textarea>
+    f"""
+    <textarea id='inputArea' rows=3 style='width:100%; font-size:20px;' 
+        placeholder='請輸入上方句子，系統將自動記錄按鍵時間...'></textarea>
+    <script>
+        const log = [];
+        const input = document.getElementById("inputArea");
+
+        input.addEventListener('keydown', e => {{
+            log.push({{key: e.key, type: 'down', time: Date.now()}});
+        }});
+        input.addEventListener('keyup', e => {{
+            log.push({{key: e.key, type: 'up', time: Date.now()}});
+        }});
+
+        window.addEventListener("message", (event) => {{
+            if (event.data === "submit") {{
+                const payload = JSON.stringify(log);
+                const iframe = document.createElement('iframe');
+                iframe.setAttribute('srcdoc', `<script>window.parent.postMessage(${{payload}}, '*');</script>`);
+                document.body.appendChild(iframe);
+            }}
+        }});
+    </script>
     """,
-    height=120
+    height=150
 )
 
-# --- 接收 keylog 資料 ---
-keylog_data = st_javascript(
-    code="""
-        new Promise((resolve) => {
-            const input = document.getElementById("inputArea");
-            const log = [];
-
-            if (!input) {
-                resolve([]);
-                return;
-            }
-
-            input.addEventListener('keydown', e => {
-                log.push({key: e.key, type: 'down', time: Date.now()});
-            });
-            input.addEventListener('keyup', e => {
-                log.push({key: e.key, type: 'up', time: Date.now()});
-            });
-
-            setTimeout(() => resolve(log), 10000);
-        });
-    """,
-    height=0
-)
+# --- 接收前端 postMessage 傳來的資料 ---
+def handle_js_event():
+    js_event = st.experimental_get_query_params().get("keylog")
+    if js_event:
+        try:
+            st.session_state.keylog_data = json.loads(js_event[0])
+        except:
+            pass
+handle_js_event()
 
 # --- 寫入 Google Sheet ---
 def save_to_gsheet(record: dict):
@@ -107,9 +114,9 @@ def save_to_gsheet(record: dict):
         st.error(f"❌ Google Sheet 寫入失敗：{e}")
 
 # --- 顯示 keylog JSON ---
-if keylog_data:
+if st.session_state.keylog_data:
     st.markdown("### 🔍 Keystroke JSON 紀錄")
-    st.json(keylog_data)
+    st.json(st.session_state.keylog_data)
 
 # --- 送出資料 ---
 if st.button("📤 送出資料"):
@@ -138,12 +145,12 @@ if st.button("📤 送出資料"):
         data=json.dumps(user_profile, ensure_ascii=False)
     )
 
-    if keylog_data:
+    if st.session_state.keylog_data:
         st.download_button(
             label="⬇ 下載 keystroke log JSON",
             file_name="keystroke_log.json",
             mime="application/json",
-            data=json.dumps(keylog_data, ensure_ascii=False)
+            data=json.dumps(st.session_state.keylog_data, ensure_ascii=False)
         )
 
 st.markdown("---")
