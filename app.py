@@ -60,7 +60,9 @@ components.html("""
   });
   function sendLog() {
     const data = JSON.stringify(log);
-    window.parent.postMessage({ type: "keylog_data", data: data }, "*");
+    if (window.streamlitReceiveMessage) {
+      window.streamlitReceiveMessage({ type: "keylog_data", data: data });
+    }
   }
 </script>
 """, height=300)
@@ -69,11 +71,11 @@ components.html("""
 result = stj.st_javascript(
     """
     new Promise((resolve) => {
-      window.addEventListener("message", (e) => {
-        if (e.data && e.data.type === "keylog_data") {
-          resolve(e.data.data);
+      window.streamlitReceiveMessage = (data) => {
+        if (data && data.type === "keylog_data") {
+          resolve(data.data);
         }
-      });
+      };
     });
     """
 )
