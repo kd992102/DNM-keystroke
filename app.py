@@ -4,6 +4,7 @@ import time
 import uuid
 import json
 import gspread
+import streamlit.components.v1 as components
 from oauth2client.service_account import ServiceAccountCredentials
 import streamlit_javascript as stj
 
