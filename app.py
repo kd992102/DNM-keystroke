@@ -6,6 +6,7 @@ import json
 import streamlit.components.v1 as components
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+from streamlit_javascript import st_javascript
 
 st.set_page_config(page_title="Keystroke Dynamics Study", layout="centered")
 
@@ -47,47 +48,36 @@ st.markdown(f"## ✍️ 請輸入下列句子：\n\n**{sentence}**")
 if "keylog_data" not in st.session_state:
     st.session_state.keylog_data = []
 
-# --- HTML + JS 前端輸入區 ---
-components.html(
+# --- 前端 keylogger 使用 streamlit-javascript ---
+keylog_data = st_javascript(
     """
-    <textarea id='inputArea' rows=3 style='width:100%; font-size:20px;' 
-        placeholder='請輸入上方句子，系統將自動記錄按鍵時間...'></textarea>
-    <button onclick="sendData()" style='margin-top:10px;'>送出按鍵紀錄</button>
-    <script>
+    async function recordKeystrokes() {
         const log = [];
-        const input = document.getElementById("inputArea");
-
-        input.addEventListener('keydown', e => {
+        const textarea = window.document.getElementById('inputArea');
+        textarea.addEventListener('keydown', e => {
             log.push({key: e.key, type: 'down', time: Date.now()});
         });
-        input.addEventListener('keyup', e => {
+        textarea.addEventListener('keyup', e => {
             log.push({key: e.key, type: 'up', time: Date.now()});
         });
 
-        function sendData() {
-            const payload = JSON.stringify(log);
-            const iframe = document.createElement('iframe');
-            iframe.style.display = 'none';
-            iframe.srcdoc = `<script>window.parent.postMessage(${payload}, '*');</script>`;
-            document.body.appendChild(iframe);
-        }
-
-        window.addEventListener("message", (event) => {
-            if (event.data && Array.isArray(event.data)) {
-                const textarea = document.createElement('textarea');
-                textarea.name = 'keylog';
-                textarea.value = JSON.stringify(event.data);
-                document.body.appendChild(textarea);
-            }
-        });
-    </script>
+        await new Promise(resolve => setTimeout(resolve, 10000));
+        return log;
+    }
+    recordKeystrokes();
     """,
-    height=220
+    key="logger"
 )
 
+st.text_area("請輸入：", key="inputArea", height=100)
+
+if keylog_data:
+    st.session_state.keylog_data = keylog_data
+
 # --- 顯示 keylog JSON ---
-st.markdown("### 🔍 Keystroke JSON 紀錄")
-st.json(st.session_state.keylog_data)
+if st.session_state.keylog_data:
+    st.markdown("### 🔍 Keystroke JSON 紀錄")
+    st.json(st.session_state.keylog_data)
 
 # --- 寫入 Google Sheet ---
 def save_to_gsheet(record: dict):
