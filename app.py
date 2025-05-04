@@ -43,35 +43,35 @@ st.markdown(f"## ✍️ 請輸入下列句子：\n\n**{sentence}**")
 
 # --- 前端輸入區與 keylogger JS ---
 components.html(
-    f"""
-    <textarea id=\"inputArea\" rows=3 style=\"width:100%; font-size:20px;\" 
-        placeholder=\"請輸入上方句子，系統將自動記錄按鍵時間...\"></textarea>
+    """
+    <textarea id="inputArea" rows=3 style="width:100%; font-size:20px;"
+        placeholder="請輸入上方句子，系統將自動記錄按鍵時間..."></textarea>
     <script>
         const log = [];
         const input = document.getElementById("inputArea");
 
-        input.addEventListener('keydown', e => {
-            log.push({
+        input.addEventListener('keydown', e => {{
+            log.push({{
                 key: e.key,
                 type: 'down',
                 time: Date.now()
-            });
-        });
+            }});
+        }});
 
-        input.addEventListener('keyup', e => {
-            log.push({
+        input.addEventListener('keyup', e => {{
+            log.push({{
                 key: e.key,
                 type: 'up',
                 time: Date.now()
-            });
-        });
+            }});
+        }});
 
-        window.addEventListener("message", (event) => {
-            if (event.data === "get_log") {
+        window.addEventListener("message", (event) => {{
+            if (event.data === "get_log") {{
                 const result = JSON.stringify(log);
                 window.parent.postMessage(result, "*");
-            }
-        });
+            }}
+        }});
     </script>
     """,
     height=150
