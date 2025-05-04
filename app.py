@@ -85,8 +85,12 @@ result = stj.st_javascript(
 
 if result:
     try:
-        st.session_state["keylog_data"] = json.loads(result)
-        st.success("✅ 已接收按鍵資料")
+        parsed = json.loads(result)
+        if isinstance(parsed, list) and len(parsed) > 0:
+            st.session_state["keylog_data"] = parsed
+            st.success("✅ 已接收按鍵資料")
+        else:
+            st.warning("⚠️ 接收到的按鍵資料為空")
     except:
         st.warning("⚠️ 無法解析 keylog 資料。")
 
@@ -127,7 +131,10 @@ def save_keylog_to_sheet2(user_id, keylog):
         ]
         creds = ServiceAccountCredentials.from_json_keyfile_dict(info, scope)
         client = gspread.authorize(creds)
-        sheet2 = client.open("DNM-keystroke-log").worksheet("Sheet2")
+        spreadsheet = client.open("DNM-keystroke-log")
+        if "Sheet2" not in [ws.title for ws in spreadsheet.worksheets()]:
+            spreadsheet.add_worksheet(title="Sheet2", rows="1000", cols="2")
+        sheet2 = spreadsheet.worksheet("Sheet2")
 
         row = [user_id, json.dumps(keylog, ensure_ascii=False)]
         sheet2.append_row(row)
