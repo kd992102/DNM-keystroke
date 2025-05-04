@@ -3,9 +3,12 @@ import pandas as pd
 import time
 import uuid
 import json
+import base64
+import urllib.parse
+import streamlit.components.v1 as components
+from streamlit_javascript import st_javascript
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-import streamlit_javascript as stj
 
 st.set_page_config(page_title="Keystroke Dynamics Study", layout="centered")
 
@@ -43,54 +46,53 @@ sentence = "我每天都會使用電腦打字處理工作"
 st.markdown("---")
 st.markdown(f"## ✍️ 請輸入下列句子：\n\n**{sentence}**")
 
-# --- 輸入區與 JavaScript 偵測按鍵 ---
-st.markdown("### 打字區")
-result = stj.st_javascript("""
-const container = document.createElement('div');
+# --- 用 session_state 儲存 keylog base64 傳回資料 ---
+if "keylog_data" not in st.session_state:
+    st.session_state.keylog_data = []
 
-const input = document.createElement('textarea');
-input.rows = 4;
-input.placeholder = '請輸入上方句子';
-input.id = 'inputArea';
-input.style.width = '100%';
-input.style.fontSize = '20px';
-container.appendChild(input);
+components.html(
+    """
+    <textarea id='inputArea' rows=3 style='width:100%; font-size:20px;' 
+        placeholder='請輸入上方句子，系統將自動記錄按鍵時間...'></textarea>
+    <button onclick="sendData()" style='margin-top:10px;'>送出按鍵紀錄</button>
+    <script>
+        const log = [];
+        const input = document.getElementById("inputArea");
 
-const button = document.createElement('button');
-button.innerText = '送出按鍵紀錄';
-button.style.marginTop = '10px';
-button.style.fontSize = '18px';
-container.appendChild(button);
+        input.addEventListener('keydown', e => {
+            log.push({key: e.key, type: 'down', time: Date.now()});
+        });
+        input.addEventListener('keyup', e => {
+            log.push({key: e.key, type: 'up', time: Date.now()});
+        });
 
-document.body.appendChild(container);
+        function sendData() {
+            const payload = JSON.stringify(log);
+            parent.postMessage({type: 'keylog', data: payload}, '*');
+        }
+    </script>
+    """,
+    height=200
+)
 
-const log = [];
-input.addEventListener('keydown', e => {
-  log.push({ key: e.key, type: 'down', time: Date.now() });
-});
-input.addEventListener('keyup', e => {
-  log.push({ key: e.key, type: 'up', time: Date.now() });
-});
-
-return new Promise((resolve) => {
-  button.addEventListener('click', () => {
-    resolve(JSON.stringify(log));
-  });
+# --- 解碼 query_params 並儲存 keylog ---
+# 接收前端傳來的 keylog
+result = st_javascript("""
+new Promise((resolve) => {
+    window.addEventListener("message", (event) => {
+        if (event.data?.type === "keylog") {
+            resolve(event.data.data);
+        }
+    });
 });
 """)
 
 if result:
     try:
-        parsed = json.loads(result)
-        if isinstance(parsed, list):
-            st.session_state["keylog_data"] = parsed
-            st.success("✅ 已接收按鍵資料")
-        else:
-            st.warning("⚠️ 資料格式錯誤（不是 list）")
+        st.session_state.keylog_data = json.loads(result)
+        st.success("✅ 已成功接收 keystroke log")
     except Exception as e:
-        st.warning(f"⚠️ 無法解析 keylog 資料：{e}")
-else:
-    st.warning("⚠️ 尚未收到任何按鍵紀錄")
+        st.error(f"⚠️ 解析失敗: {e}")
 
 # --- 寫入 Google Sheet ---
 def save_to_gsheet(record: dict):
@@ -120,29 +122,8 @@ def save_to_gsheet(record: dict):
     except Exception as e:
         st.error(f"❌ Google Sheet 寫入失敗：{e}")
 
-def save_keylog_to_sheet2(user_id, keylog):
-    try:
-        info = json.loads(st.secrets["GOOGLE_SHEET_CREDENTIALS"])
-        scope = [
-            "https://spreadsheets.google.com/feeds",
-            "https://www.googleapis.com/auth/drive"
-        ]
-        creds = ServiceAccountCredentials.from_json_keyfile_dict(info, scope)
-        client = gspread.authorize(creds)
-        spreadsheet = client.open("DNM-keystroke-log")
-        sheet2 = spreadsheet.worksheet("工作表2")
-
-        row = [user_id, json.dumps(keylog, ensure_ascii=False)]
-        sheet2.append_row(row)
-        st.success("✅ 整包 keystroke JSON 已寫入 工作表2！")
-    except Exception as e:
-        st.error(f"❌ Keystroke log 寫入失敗：{e}")
-
+# --- 送出資料 ---
 if st.button("📤 送出資料"):
-    if not isinstance(st.session_state.get("keylog_data"), list) or len(st.session_state.get("keylog_data")) == 0:
-        st.warning("⚠️ 請先按下『送出按鍵紀錄』，才能提交資料。")
-        st.stop()
-
     st.markdown("⏳ 資料傳送中...")
     st.query_params.clear()
 
@@ -158,8 +139,23 @@ if st.button("📤 送出資料"):
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
     }
 
+    st.json(user_profile)
     save_to_gsheet(user_profile)
-    save_keylog_to_sheet2(user_id, st.session_state["keylog_data"])
+
+    st.download_button(
+        label="⬇ 下載背景資料 JSON",
+        file_name="user_profile.json",
+        mime="application/json",
+        data=json.dumps(user_profile, ensure_ascii=False)
+    )
+
+    if st.session_state.keylog_data:
+        st.download_button(
+            label="⬇ 下載 keystroke log JSON",
+            file_name="keystroke_log.json",
+            mime="application/json",
+            data=json.dumps(st.session_state.keylog_data, ensure_ascii=False)
+        )
 
 st.markdown("---")
 st.caption("專題名稱：DNM-keystroke | Powered by Streamlit")
