@@ -45,27 +45,36 @@ st.markdown(f"## ✍️ 請輸入下列句子：\n\n**{sentence}**")
 
 # --- 輸入區與 JavaScript 偵測按鍵 ---
 st.markdown("### 打字區")
-input_area = st.text_area("", placeholder="請輸入上方句子，系統將自動記錄按鍵時間...", height=100)
+st.markdown("""
+<textarea id="inputArea" rows="4" style="width:100%; font-size:20px;" placeholder="請輸入上方句子，系統將自動記錄按鍵時間..."></textarea>
+<button id="sendBtn" style="margin-top:10px; font-size:18px;">送出按鍵紀錄</button>
+<script>
+  const log = [];
+  const input = document.getElementById("inputArea");
+  input.addEventListener('keydown', e => {
+    log.push({key: e.key, type: 'down', time: Date.now()});
+  });
+  input.addEventListener('keyup', e => {
+    log.push({key: e.key, type: 'up', time: Date.now()});
+  });
+  document.getElementById("sendBtn").addEventListener("click", () => {
+    const data = JSON.stringify(log);
+    if (window.streamlitReceiveMessage) {
+      window.streamlitReceiveMessage({ type: "keylog_data", data });
+    }
+  });
+</script>
+""", unsafe_allow_html=True)
 
+# --- 接收 JS 回傳資料 ---
 result = stj.st_javascript(
     """
-    const log = [];
-    const input = window.parent.document.querySelector("textarea");
-    if (input) {
-      input.addEventListener('keydown', e => {
-        log.push({key: e.key, type: 'down', time: Date.now()});
-      });
-      input.addEventListener('keyup', e => {
-        log.push({key: e.key, type: 'up', time: Date.now()});
-      });
-    }
     new Promise((resolve) => {
-      const button = window.parent.document.querySelector("button[kind='primary']");
-      if (button) {
-        button.addEventListener('click', () => {
-          resolve(JSON.stringify(log));
-        });
-      }
+      window.streamlitReceiveMessage = (data) => {
+        if (data && data.type === "keylog_data") {
+          resolve(data.data);
+        }
+      };
     });
     """
 )
