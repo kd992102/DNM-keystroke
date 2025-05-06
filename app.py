@@ -93,7 +93,7 @@ if st.button("📩 接收按鍵紀錄"):
         new Promise((resolve) => {
             window.addEventListener("streamlit:keystrokeData", (event) => {
             resolve(event.detail);
-        }, { once: true });
+        });
         stopListeningAndSend();
     });""")
     if result:
