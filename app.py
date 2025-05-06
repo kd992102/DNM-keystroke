@@ -72,6 +72,7 @@ st.markdown("""
 
     input.addEventListener('keydown', keydownHandler);
     input.addEventListener('keyup', keyupHandler);
+    console.log("📝 keylog:", log);
   }
 
   function stopListeningAndSend() {
@@ -95,12 +96,14 @@ st.markdown("""
 # 接收前端傳來的 keylog
 if st.button("📩 接收按鍵紀錄"):
     result = st_javascript("""
-        stopListeningAndSend();
-        new Promise((resolve) => {
-            window.addEventListener("streamlit:keystrokeData", (event) => {
-            resolve(event.detail);
-        });
-    });""")
+    new Promise((resolve) => {
+        window.addEventListener("streamlit:keystrokeData", (event) => {
+        resolve(event.detail);
+        }, { once: true });
+        stopListeningAndSend();  // 這個觸發事件
+    });
+    """)
+    st.write("結果：", result)
     if result:
         try:
             parsed = json.loads(result)
