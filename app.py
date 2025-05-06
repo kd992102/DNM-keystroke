@@ -90,11 +90,11 @@ st.markdown("""
 # 接收前端傳來的 keylog
 if st.button("📩 接收按鍵紀錄"):
     result = st_javascript("""
-        stopListeningAndSend();
         new Promise((resolve) => {
             window.addEventListener("streamlit:keystrokeData", (event) => {
             resolve(event.detail);
         }, { once: true });
+        stopListeningAndSend();
     });""")
     if result:
         try:
