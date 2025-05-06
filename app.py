@@ -26,12 +26,6 @@ st.markdown("""
 """)
 
 consent = st.checkbox("我已閱讀說明並同意參與研究")
-if not consent:
-    st.stop()
-else:
-    listen = st_javascript("startListening();")
-    if listen:
-        st.success("已開始監聽")
 
 # --- 背景資料填寫 ---
 st.markdown("## 👤 基本資料填寫")
@@ -103,6 +97,13 @@ st.markdown("""
 </script>
 """, unsafe_allow_html=True)
 
+
+if not consent:
+    st.stop()
+else:
+    listen = st_javascript("startListening();")
+    if listen:
+        st.success("已開始監聽")
 
 # --- 解碼 query_params 並儲存 keylog ---
 # 接收前端傳來的 keylog
