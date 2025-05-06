@@ -96,22 +96,21 @@ st.markdown("""
 
 # --- 解碼 query_params 並儲存 keylog ---
 # 接收前端傳來的 keylog
-if st.button("📤 接收按鍵紀錄"):
-    result = st_javascript("""
-        new Promise((resolve) => {
-                window.addEventListener("streamlit:keystrokeData", (event) => {
-                resolve(event.detail);
-            });
+result = st_javascript("""
+    new Promise((resolve) => {
+            window.addEventListener("streamlit:keystrokeData", (event) => {
+            resolve(event.detail);
         });
-    """)
+    });
+""")
 
-    if result:
-        try:
-            parsed = json.loads(result)
-            st.success("✅ 已接收按鍵資料")
-            # save_keylog_to_sheet2(user_id, parsed)
-        except Exception as e:
-            st.error(f"❌ 無法解析按鍵資料：{e}")
+if result:
+    try:
+        parsed = json.loads(result)
+        st.success("✅ 已接收按鍵資料")
+        # save_keylog_to_sheet2(user_id, parsed)
+    except Exception as e:
+        st.error(f"❌ 無法解析按鍵資料：{e}")
 
 # --- 寫入 Google Sheet ---
 def save_to_gsheet(record: dict):
