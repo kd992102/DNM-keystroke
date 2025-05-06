@@ -29,7 +29,9 @@ consent = st.checkbox("我已閱讀說明並同意參與研究")
 if not consent:
     st.stop()
 else:
-    st_javascript("startListening();")
+    listen = st_javascript("startListening();")
+    if listen:
+        st.success("已開始監聽")
 
 # --- 背景資料填寫 ---
 st.markdown("## 👤 基本資料填寫")
