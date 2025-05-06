@@ -73,6 +73,7 @@ st.markdown("""
   }
 
   function stopListeningAndSend() {
+    console.log("📝 keylog:", log);
     if (input && keydownHandler && keyupHandler) {
       input.removeEventListener('keydown', keydownHandler);
       input.removeEventListener('keyup', keyupHandler);
@@ -92,11 +93,11 @@ st.markdown("""
 # 接收前端傳來的 keylog
 if st.button("📩 接收按鍵紀錄"):
     result = st_javascript("""
+        stopListeningAndSend();
         new Promise((resolve) => {
             window.addEventListener("streamlit:keystrokeData", (event) => {
             resolve(event.detail);
         });
-        stopListeningAndSend();
     });""")
     if result:
         try:
