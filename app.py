@@ -13,13 +13,13 @@ from oauth2client.service_account import ServiceAccountCredentials
 st.set_page_config(page_title="Keystroke Dynamics Study", layout="centered")
 components.html("""
 <script>
-const log = [];
+window.log = [];
 let input = null;
 let keydownHandler = null;
 let keyupHandler = null;
 let hasBound = false;
 
-function startListening() {
+window.startListening = function () {
   if (hasBound) return;
   hasBound = true;
 
@@ -28,34 +28,34 @@ function startListening() {
     if (input) {
       keydownHandler = (e) => {
         const entry = { key: e.key, type: 'down', time: Date.now() };
-        log.push(entry);
+        window.log.push(entry);
         console.log("⬇️", entry);
       };
       keyupHandler = (e) => {
         const entry = { key: e.key, type: 'up', time: Date.now() };
-        log.push(entry);
+        window.log.push(entry);
         console.log("⬆️", entry);
       };
       input.addEventListener('keydown', keydownHandler);
       input.addEventListener('keyup', keyupHandler);
-      console.log("✅ 鍵盤監聽綁定完成");
+      console.log("✅ 監聽綁定完成");
       clearInterval(interval);
     }
   }, 300);
-}
+};
 
-function stopListeningAndSend() {
+window.stopListeningAndSend = function () {
   if (input && keydownHandler && keyupHandler) {
     input.removeEventListener('keydown', keydownHandler);
     input.removeEventListener('keyup', keyupHandler);
   }
 
-  console.log("📤 傳送 keylog，共有", log.length, "筆");
+  console.log("📤 傳送 keylog，共有", window.log.length, "筆");
   const event = new CustomEvent("streamlit:keystrokeData", {
-    detail: JSON.stringify(log)
+    detail: JSON.stringify(window.log)
   });
   window.dispatchEvent(event);
-}
+};
 </script>
 """, height=0)
 # --- 說明與知情同意 ---
