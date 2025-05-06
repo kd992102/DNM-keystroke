@@ -28,6 +28,8 @@ st.markdown("""
 consent = st.checkbox("我已閱讀說明並同意參與研究")
 if not consent:
     st.stop()
+else:
+    st_javascript("startListening();")
 
 # --- 背景資料填寫 ---
 st.markdown("## 👤 基本資料填寫")
@@ -71,46 +73,33 @@ st.markdown("""
     input.addEventListener('keyup', keyupHandler);
   }
 
-  function stopListening() {
+  function stopListeningAndSend() {
     if (input && keydownHandler && keyupHandler) {
       input.removeEventListener('keydown', keydownHandler);
       input.removeEventListener('keyup', keyupHandler);
     }
-
     const event = new CustomEvent("streamlit:keystrokeData", {
       detail: JSON.stringify(log)
     });
     window.dispatchEvent(event);
   }
-
-  setTimeout(() => {
-    startListening();
-    const stopBtn = document.getElementById("stopBtn");
-    if (stopBtn) {
-      stopBtn.addEventListener("click", stopListening);
-    }
-  }, 500);
 </script>
 """, unsafe_allow_html=True)
 
 
 # --- 解碼 query_params 並儲存 keylog ---
 # 接收前端傳來的 keylog
-result = st_javascript("""
-    new Promise((resolve) => {
-            window.addEventListener("streamlit:keystrokeData", (event) => {
-            resolve(event.detail);
-        });
-    });
-""")
-
-if result:
-    try:
-        parsed = json.loads(result)
-        st.success("✅ 已接收按鍵資料")
-        # save_keylog_to_sheet2(user_id, parsed)
-    except Exception as e:
-        st.error(f"❌ 無法解析按鍵資料：{e}")
+if st.button("📩 接收按鍵紀錄"):
+    result = st_javascript("stopListeningAndSend();")
+    if result:
+        try:
+            parsed = json.loads(result)
+            st.success("✅ 已接收按鍵資料")
+            # save_keylog_to_sheet2(user_id, parsed)
+        except Exception as e:
+            st.error(f"❌ 無法解析按鍵資料：{e}")
+    else:
+        st.warning("⚠️ 沒有收到任何按鍵紀錄")
 
 # --- 寫入 Google Sheet ---
 def save_to_gsheet(record: dict):
