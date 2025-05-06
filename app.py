@@ -11,50 +11,6 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
 st.set_page_config(page_title="Keystroke Dynamics Study", layout="centered")
-
-# --- 說明與知情同意 ---
-st.markdown("""
-## 📄 實驗說明與參與者同意
-我們正在進行一項關於「打字行為與使用者辨識」的機器學習實驗。過程中會紀錄：
-- 每個鍵的按下與放開時間
-- 您的基本背景資料（匿名）
-- 所輸入的特定句子
-
-✅ 不會蒐集任何可識別身分的資訊。資料僅用於課程報告，並遵守個資法與學術研究倫理。
-
-請勾選下方同意後再開始填寫。
-""")
-
-consent = st.checkbox("我已閱讀說明並同意參與研究")
-if not consent:
-    st.stop()
-else:
-    listen = st_javascript("startListening();")
-    if listen:
-        st.success("已開始監聽")
-
-# --- 背景資料填寫 ---
-st.markdown("## 👤 基本資料填寫")
-col1, col2 = st.columns(2)
-with col1:
-    gender = st.radio("性別", ["男", "女", "不透露"])
-    age = st.selectbox("年齡區間", ["18-24", "25-34", "35-44", "45+"])
-    education = st.selectbox("最高學歷", ["高中", "大學", "碩士", "博士"])
-with col2:
-    dominant_hand = st.radio("慣用手", ["左手", "右手", "雙手皆可"])
-    typing_exp = st.selectbox("每日打字時間", ["<1 小時", "1-3 小時", ">3 小時"])
-    device_type = st.selectbox("目前使用的裝置", ["手機", "平板", "筆電", "桌機"])
-
-user_id = str(uuid.uuid4())[:8]
-sentence = "我每天都會使用電腦打字處理工作"
-st.markdown("---")
-st.markdown(f"## ✍️ 請輸入下列句子：\n\n**{sentence}**")
-
-# --- 用 session_state 儲存 keylog base64 傳回資料 ---
-if "keylog_data" not in st.session_state:
-    st.session_state.keylog_data = []
-
-# 加在 st.markdown(...) 輸入區那裡
 components.html("""
 <script>
 const log = [];
@@ -102,6 +58,49 @@ function stopListeningAndSend() {
 }
 </script>
 """, height=0)
+# --- 說明與知情同意 ---
+st.markdown("""
+## 📄 實驗說明與參與者同意
+我們正在進行一項關於「打字行為與使用者辨識」的機器學習實驗。過程中會紀錄：
+- 每個鍵的按下與放開時間
+- 您的基本背景資料（匿名）
+- 所輸入的特定句子
+
+✅ 不會蒐集任何可識別身分的資訊。資料僅用於課程報告，並遵守個資法與學術研究倫理。
+
+請勾選下方同意後再開始填寫。
+""")
+
+consent = st.checkbox("我已閱讀說明並同意參與研究")
+if not consent:
+    st.stop()
+else:
+    listen = st_javascript("startListening();")
+    if listen:
+        st.success("已開始監聽")
+
+# --- 背景資料填寫 ---
+st.markdown("## 👤 基本資料填寫")
+col1, col2 = st.columns(2)
+with col1:
+    gender = st.radio("性別", ["男", "女", "不透露"])
+    age = st.selectbox("年齡區間", ["18-24", "25-34", "35-44", "45+"])
+    education = st.selectbox("最高學歷", ["高中", "大學", "碩士", "博士"])
+with col2:
+    dominant_hand = st.radio("慣用手", ["左手", "右手", "雙手皆可"])
+    typing_exp = st.selectbox("每日打字時間", ["<1 小時", "1-3 小時", ">3 小時"])
+    device_type = st.selectbox("目前使用的裝置", ["手機", "平板", "筆電", "桌機"])
+
+user_id = str(uuid.uuid4())[:8]
+sentence = "我每天都會使用電腦打字處理工作"
+st.markdown("---")
+st.markdown(f"## ✍️ 請輸入下列句子：\n\n**{sentence}**")
+
+# --- 用 session_state 儲存 keylog base64 傳回資料 ---
+if "keylog_data" not in st.session_state:
+    st.session_state.keylog_data = []
+
+# 加在 st.markdown(...) 輸入區那裡
 
 
 # --- 解碼 query_params 並儲存 keylog ---
