@@ -26,6 +26,12 @@ st.markdown("""
 """)
 
 consent = st.checkbox("我已閱讀說明並同意參與研究")
+if not consent:
+    st.stop()
+else:
+    listen = st_javascript("startListening();")
+    if listen:
+        st.success("已開始監聽")
 
 # --- 背景資料填寫 ---
 st.markdown("## 👤 基本資料填寫")
@@ -49,15 +55,18 @@ if "keylog_data" not in st.session_state:
     st.session_state.keylog_data = []
 
 # 加在 st.markdown(...) 輸入區那裡
-st.markdown("""
-<textarea id="inputArea" rows="4" style="width:100%; font-size:20px;" placeholder="請輸入上方句子..."></textarea>
+components.html("""
 <script>
-  const log = [];
-  let input = null;
-  let keydownHandler = null;
-  let keyupHandler = null;
+const log = [];
+let input = null;
+let keydownHandler = null;
+let keyupHandler = null;
+let hasBound = false;
 
-  function startListening() {
+function startListening() {
+  if (hasBound) return;
+  hasBound = true;
+
   const interval = setInterval(() => {
     input = document.getElementById("inputArea");
     if (input) {
@@ -73,37 +82,27 @@ st.markdown("""
       };
       input.addEventListener('keydown', keydownHandler);
       input.addEventListener('keyup', keyupHandler);
-      console.log("✅ 監聽綁定完成");
+      console.log("✅ 鍵盤監聽綁定完成");
       clearInterval(interval);
-    } else {
-      console.log("⏳ 等待 inputArea 載入...");
     }
-  }, 300);  // 每 300ms 嘗試一次
+  }, 300);
 }
 
-  function stopListeningAndSend() {
-    console.log("📝 keylog:", log);
-    if (input && keydownHandler && keyupHandler) {
-      input.removeEventListener('keydown', keydownHandler);
-      input.removeEventListener('keyup', keyupHandler);
-    }
-    console.log("📝 keylog:", log);
-    const event = new CustomEvent("streamlit:keystrokeData", {
-      detail: JSON.stringify(log)
-    });
-    window.dispatchEvent(event);
-    console.log("🚀 stopListeningAndSend() triggered");
+function stopListeningAndSend() {
+  if (input && keydownHandler && keyupHandler) {
+    input.removeEventListener('keydown', keydownHandler);
+    input.removeEventListener('keyup', keyupHandler);
   }
+
+  console.log("📤 傳送 keylog，共有", log.length, "筆");
+  const event = new CustomEvent("streamlit:keystrokeData", {
+    detail: JSON.stringify(log)
+  });
+  window.dispatchEvent(event);
+}
 </script>
-""", unsafe_allow_html=True)
+""", height=0)
 
-
-if not consent:
-    st.stop()
-else:
-    listen = st_javascript("startListening();")
-    if listen:
-        st.success("已開始監聽")
 
 # --- 解碼 query_params 並儲存 keylog ---
 # 接收前端傳來的 keylog
