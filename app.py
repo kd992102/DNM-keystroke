@@ -77,10 +77,12 @@ st.markdown("""
       input.removeEventListener('keydown', keydownHandler);
       input.removeEventListener('keyup', keyupHandler);
     }
+    console.log("📝 keylog:", log);
     const event = new CustomEvent("streamlit:keystrokeData", {
       detail: JSON.stringify(log)
     });
     window.dispatchEvent(event);
+    console.log("🚀 stopListeningAndSend() triggered");
   }
 </script>
 """, unsafe_allow_html=True)
