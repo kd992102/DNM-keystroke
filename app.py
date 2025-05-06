@@ -55,7 +55,6 @@ if "keylog_data" not in st.session_state:
 # 加在 st.markdown(...) 輸入區那裡
 st.markdown("""
 <textarea id="inputArea" rows="4" style="width:100%; font-size:20px;" placeholder="請輸入上方句子..."></textarea>
-<button id="stopBtn" style="margin-top:10px; font-size:18px;">📩 送出按鍵紀錄</button>
 <script>
   const log = [];
   let input = null;
