@@ -50,51 +50,68 @@ st.markdown(f"## ✍️ 請輸入下列句子：\n\n**{sentence}**")
 if "keylog_data" not in st.session_state:
     st.session_state.keylog_data = []
 
-components.html(
-    """
-    <textarea id='inputArea' rows=3 style='width:100%; font-size:20px;' 
-        placeholder='請輸入上方句子，系統將自動記錄按鍵時間...'></textarea>
-    <button onclick="sendData()" style='margin-top:10px;'>送出按鍵紀錄</button>
-    <script>
-        const log = [];
-        const input = document.getElementById("inputArea");
+# 加在 st.markdown(...) 輸入區那裡
+st.markdown("""
+<textarea id="inputArea" rows="4" style="width:100%; font-size:20px;" placeholder="請輸入上方句子..."></textarea>
+<button id="stopBtn" style="margin-top:10px; font-size:18px;">📩 送出按鍵紀錄</button>
+<script>
+  const log = [];
+  let input = null;
+  let keydownHandler = null;
+  let keyupHandler = null;
 
-        input.addEventListener('keydown', e => {
-            log.push({key: e.key, type: 'down', time: Date.now()});
-        });
-        input.addEventListener('keyup', e => {
-            log.push({key: e.key, type: 'up', time: Date.now()});
-        });
+  function startListening() {
+    input = document.getElementById("inputArea");
+    if (!input) return;
 
-        function sendData() {
-            const payload = JSON.stringify(log);
-            console.log("Sending data:", payload);
-            window.parent.postMessage({type: 'keylog', data: payload}, '*');
-        }
-    </script>
-    """,
-    height=200
-)
+    keydownHandler = e => log.push({ key: e.key, type: 'down', time: Date.now() });
+    keyupHandler = e => log.push({ key: e.key, type: 'up', time: Date.now() });
+
+    input.addEventListener('keydown', keydownHandler);
+    input.addEventListener('keyup', keyupHandler);
+  }
+
+  function stopListening() {
+    if (input && keydownHandler && keyupHandler) {
+      input.removeEventListener('keydown', keydownHandler);
+      input.removeEventListener('keyup', keyupHandler);
+    }
+
+    const event = new CustomEvent("streamlit:keystrokeData", {
+      detail: JSON.stringify(log)
+    });
+    window.dispatchEvent(event);
+  }
+
+  setTimeout(() => {
+    startListening();
+    const stopBtn = document.getElementById("stopBtn");
+    if (stopBtn) {
+      stopBtn.addEventListener("click", stopListening);
+    }
+  }, 500);
+</script>
+""", unsafe_allow_html=True)
+
 
 # --- 解碼 query_params 並儲存 keylog ---
 # 接收前端傳來的 keylog
 if st.button("📤 接收按鍵紀錄"):
     result = st_javascript("""
-    new Promise((resolve) => {
-        window.addEventListener("message", (event) => {
-            if (event.data?.type === "keylog") {
-                resolve(event.data.data);
-            }
+        new Promise((resolve) => {
+                window.addEventListener("streamlit:keystrokeData", (event) => {
+                resolve(event.detail);
+            });
         });
-    });
     """)
 
     if result:
         try:
-            st.session_state.keylog_data = json.loads(result)
-            st.success("✅ 已收到 keylog！")
+            parsed = json.loads(result)
+            st.success("✅ 已接收按鍵資料")
+            # save_keylog_to_sheet2(user_id, parsed)
         except Exception as e:
-            st.error(f"⚠️ 解析失敗：{e}")
+            st.error(f"❌ 無法解析按鍵資料：{e}")
 
 # --- 寫入 Google Sheet ---
 def save_to_gsheet(record: dict):
@@ -151,13 +168,13 @@ if st.button("📤 送出資料"):
         data=json.dumps(user_profile, ensure_ascii=False)
     )
 
-    if st.session_state.keylog_data:
+    '''if st.session_state.keylog_data:
         st.download_button(
             label="⬇ 下載 keystroke log JSON",
             file_name="keystroke_log.json",
             mime="application/json",
             data=json.dumps(st.session_state.keylog_data, ensure_ascii=False)
-        )
+        )'''
 
 st.markdown("---")
 st.caption("專題名稱：DNM-keystroke | Powered by Streamlit")
