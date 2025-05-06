@@ -67,7 +67,12 @@ st.markdown("""
     input = document.getElementById("inputArea");
     if (!input) return;
 
-    keydownHandler = e => log.push({ key: e.key, type: 'down', time: Date.now() });
+    keydownHandler = e => {
+        const entry = { key: e.key, type: 'down', time: Date.now() };
+        log.push(entry);
+        console.log("⬇️", entry);
+    };
+
     keyupHandler = e => log.push({ key: e.key, type: 'up', time: Date.now() });
 
     input.addEventListener('keydown', keydownHandler);
@@ -97,10 +102,10 @@ st.markdown("""
 if st.button("📩 接收按鍵紀錄"):
     result = st_javascript("""
     new Promise((resolve) => {
+        stopListeningAndSend();
         window.addEventListener("streamlit:keystrokeData", (event) => {
         resolve(event.detail);
         }, { once: true });
-        stopListeningAndSend();  // 這個觸發事件
     });
     """)
     st.write("結果：", result)
