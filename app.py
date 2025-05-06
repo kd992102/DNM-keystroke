@@ -64,21 +64,28 @@ st.markdown("""
   let keyupHandler = null;
 
   function startListening() {
+  const interval = setInterval(() => {
     input = document.getElementById("inputArea");
-    if (!input) return;
-
-    keydownHandler = e => {
+    if (input) {
+      keydownHandler = (e) => {
         const entry = { key: e.key, type: 'down', time: Date.now() };
         log.push(entry);
         console.log("⬇️", entry);
-    };
-
-    keyupHandler = e => log.push({ key: e.key, type: 'up', time: Date.now() });
-
-    input.addEventListener('keydown', keydownHandler);
-    input.addEventListener('keyup', keyupHandler);
-    console.log("📝 keylog:", log);
-  }
+      };
+      keyupHandler = (e) => {
+        const entry = { key: e.key, type: 'up', time: Date.now() };
+        log.push(entry);
+        console.log("⬆️", entry);
+      };
+      input.addEventListener('keydown', keydownHandler);
+      input.addEventListener('keyup', keyupHandler);
+      console.log("✅ 監聽綁定完成");
+      clearInterval(interval);
+    } else {
+      console.log("⏳ 等待 inputArea 載入...");
+    }
+  }, 300);  // 每 300ms 嘗試一次
+}
 
   function stopListeningAndSend() {
     console.log("📝 keylog:", log);
