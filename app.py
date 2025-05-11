@@ -98,7 +98,7 @@ st.markdown(f"## ✍️ 請輸入下列句子：\n\n**{sentence}**")
 
 # --- 用 session_state 儲存 keylog base64 傳回資料 ---
 '''if "keylog_data" not in st.session_state:
-    st.session_state.keylog_data = []''''
+    st.session_state.keylog_data = []'''
 
 # 加在 st.markdown(...) 輸入區那裡
 
