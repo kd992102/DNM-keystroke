@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      function sendData() {
+        const msg = "你好，我是 JS 傳來的資料！";
+        Streamlit.setComponentValue(msg);
+      }
+
+      window.addEventListener("load", function () {
+        const btn = document.createElement("button");
+        btn.innerText = "點我送資料";
+        btn.onclick = sendData;
+        document.body.appendChild(btn);
+      });
+
+      // 初始化連接
+      window.addEventListener("message", (event) => {
+        const data = event.data;
+        if (data.type === "streamlit:render") {
+          Streamlit.setFrameHeight();
+        }
+      });
+
+      const Streamlit = {
+        setComponentValue: function (value) {
+          window.parent.postMessage(
+            {
+              isStreamlitMessage: true,
+              type: "streamlit:setComponentValue",
+              value: value,
+            },
+            "*"
+          );
+        },
+        setFrameHeight: function () {
+          window.parent.postMessage(
+            {
+              isStreamlitMessage: true,
+              type: "streamlit:setFrameHeight",
+              height: document.body.scrollHeight,
+            },
+            "*"
+          );
+        },
+      };
+    </script>
+  </head>
+  <body>
+    <h4>這是 JS 元件</h4>
+  </body>
+</html>

@@ -1,20 +1,13 @@
 import streamlit as st
-from streamlit.components.v1 import html
+from streamlit.components.v1 import declare_component
+import os
 
-# 使用 components.html() 直接插入原生 JS 傳值
-html("""
-    <button onclick="sendToStreamlit()">點我送資料</button>
-    <script>
-      function sendToStreamlit() {
-        const msg = "Hello from raw JS!";
-        window.parent.postMessage({
-          isStreamlitMessage: true,
-          type: "streamlit:setComponentValue",
-          value: msg
-        }, "*");
-      }
-    </script>
-""", height=100)
+# 設定 custom component 位置（本地開發或 Streamlit Cloud）
+_component_func = declare_component(
+    "js_input_component",
+    path=os.path.join(os.path.dirname(__file__), "my_component/frontend")
+)
 
-# Streamlit 不會自動接收回傳值，所以你應該只顯示這段 HTML
-st.info("請點上方按鈕測試 JS 傳值（目前不支援回傳值顯示）")
+# 取得前端傳來的值
+value = _component_func()
+st.write("接收到的 JS 傳值：", value)
