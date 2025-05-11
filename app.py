@@ -11,7 +11,7 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
 st.set_page_config(page_title="Keystroke Dynamics Study", layout="centered")
-components.html("""
+'''components.html("""
 <script>
 window.log = [];
 let input = null;
@@ -69,15 +69,15 @@ st.markdown("""
 ✅ 不會蒐集任何可識別身分的資訊。資料僅用於課程報告，並遵守個資法與學術研究倫理。
 
 請勾選下方同意後再開始填寫。
-""")
+""")'''
 
-consent = st.checkbox("我已閱讀說明並同意參與研究")
+'''consent = st.checkbox("我已閱讀說明並同意參與研究")
 if not consent:
     st.stop()
 else:
     listen = st_javascript("startListening();")
     if listen:
-        st.success("已開始監聽")
+        st.success("已開始監聽")'''
 
 # --- 背景資料填寫 ---
 st.markdown("## 👤 基本資料填寫")
@@ -97,15 +97,15 @@ st.markdown("---")
 st.markdown(f"## ✍️ 請輸入下列句子：\n\n**{sentence}**")
 
 # --- 用 session_state 儲存 keylog base64 傳回資料 ---
-if "keylog_data" not in st.session_state:
-    st.session_state.keylog_data = []
+'''if "keylog_data" not in st.session_state:
+    st.session_state.keylog_data = []''''
 
 # 加在 st.markdown(...) 輸入區那裡
 
 
 # --- 解碼 query_params 並儲存 keylog ---
 # 接收前端傳來的 keylog
-if st.button("📩 接收按鍵紀錄"):
+'''if st.button("📩 接收按鍵紀錄"):
     result = st_javascript("""
     new Promise((resolve) => {
         stopListeningAndSend();
@@ -180,13 +180,36 @@ if st.button("📤 送出資料"):
         data=json.dumps(user_profile, ensure_ascii=False)
     )
 
-    '''if st.session_state.keylog_data:
+    if st.session_state.keylog_data:
         st.download_button(
             label="⬇ 下載 keystroke log JSON",
             file_name="keystroke_log.json",
             mime="application/json",
             data=json.dumps(st.session_state.keylog_data, ensure_ascii=False)
-        )'''
+        )
 
-st.markdown("---")
+st.markdown("---")'''
+
+def js_code():  
+    return """  
+    <script>   
+        function returnNumber() {  
+            return 2;  
+        }  
+        const result = returnNumber();  
+        window.parent.postMessage(result, "*");  
+    </script>   
+    """  
+
+# Displaying HTML + JS in Streamlit and capturing response  
+response = st.empty()  
+components.html(js_code(), height=0)  
+
+# Using JavaScript listener to capture the returned value  
+st.write("Waiting for JavaScript response...")  
+
+# Listening for the message event from JavaScript  
+@st.cache_data  
+def listen_for_js_message(data):  
+    response.write(f"JavaScript returned: {data}")
 st.caption("專題名稱：DNM-keystroke | Powered by Streamlit")
