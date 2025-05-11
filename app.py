@@ -35,26 +35,12 @@ st.markdown(f"## ✍️ 請輸入下列句子：\n\n**{sentence}**")
 
 # --- 解碼 query_params 並儲存 keylog ---
 # 接收前端傳來的 keylog
-def js_code():  
-    return """  
-    <script>   
-        function returnNumber() {  
-            return 2;  
-        }  
-        const result = returnNumber();  
-        window.parent.postMessage(result, "*");  
-    </script>   
-    """  
+value = components.html("""
+    <script>
+        const userInput = prompt("請輸入資料：");
+        Streamlit.setComponentValue(userInput);
+    </script>
+""", height=0)
 
-# Displaying HTML + JS in Streamlit and capturing response  
-response = st.empty()  
-components.html(js_code(), height=0)  
-
-# Using JavaScript listener to capture the returned value  
-st.write("Waiting for JavaScript response...")  
-
-# Listening for the message event from JavaScript  
-@st.cache_data  
-def listen_for_js_message(data):  
-    response.write(f"JavaScript returned: {data}")
+st.write("你輸入的是：", value)
 st.caption("專題名稱：DNM-keystroke | Powered by Streamlit")
