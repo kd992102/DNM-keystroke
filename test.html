@@ -2,18 +2,118 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
-  <title>打字練習記錄器</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>打字行為研究</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background-color: #f8f9fa;
+    }
+    .consent-box {
+      background-color: #fff;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .typing-area {
+      background-color: #fff;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 20px;
+      display: none;
+    }
+    #typingArea {
+      resize: none;
+      margin-bottom: 15px;
+    }
+    .loading {
+      display: none;
+    }
+  </style>
 </head>
 <body>
-  <h1>打字練習</h1>
-  <textarea id="typingArea" rows="10" cols="50" placeholder="請開始打字..."></textarea>
-  <br>
-  <button id="uploadBtn">上傳</button>
+  <div class="container py-5">
+    <!-- 研究聲明和同意書 -->
+    <div class="consent-box" id="consentSection">
+      <h2 class="mb-4">研究參與同意書</h2>
+      
+      <div class="mb-4">
+        <h5>研究目的</h5>
+        <p>本研究旨在收集和分析使用者的打字行為模式，以開發更安全的身份驗證方法。我們將記錄您的按鍵時間間隔等資訊，但不會收集實際輸入的文字內容。</p>
+      </div>
 
+      <div class="mb-4">
+        <h5>資料收集與隱私</h5>
+        <ul>
+          <li>我們只收集按鍵的時間資訊，不記錄實際輸入的文字</li>
+          <li>所有資料都將以匿名方式處理</li>
+          <li>資料將安全存儲，僅用於研究目的</li>
+        </ul>
+      </div>
+
+      <div class="mb-4">
+        <h5>參與者權利</h5>
+        <ul>
+          <li>您可以隨時終止參與</li>
+          <li>您有權要求刪除您的資料</li>
+          <li>參與本研究不會對您造成任何風險</li>
+        </ul>
+      </div>
+
+      <div class="form-check mb-4">
+        <input class="form-check-input" type="checkbox" id="consentCheck">
+        <label class="form-check-label" for="consentCheck">
+          我已閱讀並同意參與本研究
+        </label>
+      </div>
+
+      <button class="btn btn-primary" id="startBtn" disabled>開始參與</button>
+    </div>
+
+    <!-- 打字測試區域 -->
+    <div class="typing-area" id="typingSection">
+      <h3 class="mb-4">打字測試</h3>
+      <div class="alert alert-info mb-4">
+        <h5 class="alert-heading mb-3">請照著以下句子打字：</h5>
+        <p class="sample-text mb-2" style="font-size: 1.2em; font-weight: 500;">
+          The quick brown fox jumps over the lazy dog. 敏捷的棕色狐狸跳過懶惰的狗。
+        </p>
+        <small class="text-muted">
+          * 這個句子包含了英文所有字母，並搭配中文，可以全面收集您的打字模式
+        </small>
+      </div>
+      
+      <div class="form-group">
+        <textarea class="form-control" id="typingArea" rows="8" placeholder="請在此輸入上方的句子..."></textarea>
+      </div>
+
+      <div class="d-flex align-items-center">
+        <button class="btn btn-success" id="uploadBtn">提交資料</button>
+        <div class="loading ms-3" id="loadingIndicator">
+          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+          正在上傳...
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script>
     const records = [];
     const keyMap = {};
 
+    // 同意書相關
+    document.getElementById("consentCheck").addEventListener("change", (e) => {
+      document.getElementById("startBtn").disabled = !e.target.checked;
+    });
+
+    document.getElementById("startBtn").addEventListener("click", () => {
+      document.getElementById("consentSection").style.display = "none";
+      document.getElementById("typingSection").style.display = "block";
+    });
+
+    // 打字記錄
     document.getElementById("typingArea").addEventListener("keydown", (e) => {
       if (!keyMap[e.code]) {
         keyMap[e.code] = {
@@ -33,15 +133,37 @@
       }
     });
 
-    document.getElementById("uploadBtn").addEventListener("click", () => {
-      fetch("https://dnm-keystroke.onrender.com/upload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(records)
-      })
-        .then(res => res.json())
-        .then(data => alert("上傳成功！File ID: " + data.fileId))
-        .catch(err => alert("上傳失敗: " + err.message));
+    // 上傳功能
+    document.getElementById("uploadBtn").addEventListener("click", async () => {
+      const loadingIndicator = document.getElementById("loadingIndicator");
+      const uploadBtn = document.getElementById("uploadBtn");
+      
+      try {
+        loadingIndicator.style.display = "block";
+        uploadBtn.disabled = true;
+
+        const response = await fetch("https://dnm-keystroke.onrender.com/upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(records)
+        });
+
+        const data = await response.json();
+        
+        if (data.success) {
+          alert("資料上傳成功！感謝您的參與。");
+          // 清空記錄
+          records.length = 0;
+          document.getElementById("typingArea").value = "";
+        } else {
+          throw new Error(data.error || "上傳失敗");
+        }
+      } catch (err) {
+        alert("上傳失敗: " + err.message);
+      } finally {
+        loadingIndicator.style.display = "none";
+        uploadBtn.disabled = false;
+      }
     });
   </script>
 </body>
