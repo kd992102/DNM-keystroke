@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>打字練習記錄器</title>
+</head>
+<body>
+  <h1>打字練習</h1>
+  <textarea id="typingArea" rows="10" cols="50" placeholder="請開始打字..."></textarea>
+  <br>
+  <button id="uploadBtn">上傳</button>
+
+  <script>
+    const records = [];
+    const keyMap = {};
+
+    document.getElementById("typingArea").addEventListener("keydown", (e) => {
+      if (!keyMap[e.code]) {
+        keyMap[e.code] = {
+          key: e.key,
+          code: e.code,
+          downTime: performance.now(),
+        };
+      }
+    });
+
+    document.getElementById("typingArea").addEventListener("keyup", (e) => {
+      const record = keyMap[e.code];
+      if (record) {
+        record.upTime = performance.now();
+        records.push(record);
+        delete keyMap[e.code];
+      }
+    });
+
+    document.getElementById("uploadBtn").addEventListener("click", () => {
+      fetch("http://192.168.0.114:3000/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(records)
+      })
+        .then(res => res.json())
+        .then(data => alert("上傳成功！File ID: " + data.fileId))
+        .catch(err => alert("上傳失敗: " + err.message));
+    });
+  </script>
+</body>
+</html>
