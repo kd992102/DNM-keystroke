@@ -28,7 +28,7 @@ if (process.env.GOOGLE_CREDENTIALS) {
   });
 } else {
   auth = new google.auth.GoogleAuth({
-    keyFile: './service-account.json',
+    keyFile: '../service-account.json',
     scopes: ['https://www.googleapis.com/auth/drive.file']
   });
 }
@@ -47,7 +47,7 @@ app.post('/upload', async (req, res) => {
     const client = await auth.getClient();
     const drive = google.drive({ version: 'v3', auth: client });
 
-    // 將 JSON 數據轉換為字串
+    // 將 JSON 數據轉換為字串，包含人口統計資料和打字數據
     const jsonContent = JSON.stringify(req.body, null, 2);
     
     // 創建可讀流
@@ -55,7 +55,11 @@ app.post('/upload', async (req, res) => {
     stream.push(jsonContent);
     stream.push(null);
 
-    const fileName = `typing_${Date.now()}.json`;
+    // 使用時間戳和基本資料建立檔案名稱
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const gender = req.body.demographic?.gender || 'unknown';
+    const ageGroup = req.body.demographic?.ageGroup || 'unknown';
+    const fileName = `typing_${gender}_${ageGroup}_${timestamp}.json`;
 
     const result = await drive.files.create({
       requestBody: {

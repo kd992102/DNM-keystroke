@@ -68,7 +68,61 @@
         </label>
       </div>
 
-      <button class="btn btn-primary" id="startBtn" disabled>開始參與</button>
+      <button class="btn btn-primary" id="startBtn" disabled>下一步</button>
+    </div>
+
+    <!-- 基本資料收集 -->
+    <div class="consent-box" id="demographicSection" style="display: none;">
+      <h3 class="mb-4">基本資料</h3>
+      <p class="text-muted mb-4">請填寫以下基本資料，這些資訊將幫助我們更好地分析研究結果。所有資料都將以匿名方式處理。</p>
+      
+      <form id="demographicForm" class="needs-validation" novalidate>
+        <div class="mb-4">
+          <label class="form-label">性別</label>
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="gender" id="genderM" value="M" required>
+            <label class="form-check-label" for="genderM">男</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="gender" id="genderF" value="F" required>
+            <label class="form-check-label" for="genderF">女</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="gender" id="genderO" value="O" required>
+            <label class="form-check-label" for="genderO">其他</label>
+          </div>
+          <div class="invalid-feedback">請選擇性別</div>
+        </div>
+
+        <div class="mb-4">
+          <label class="form-label" for="ageGroup">年齡層</label>
+          <select class="form-select" id="ageGroup" required>
+            <option value="">請選擇年齡層</option>
+            <option value="18-24">18-24 歲</option>
+            <option value="25-34">25-34 歲</option>
+            <option value="35-44">35-44 歲</option>
+            <option value="45-54">45-54 歲</option>
+            <option value="55-64">55-64 歲</option>
+            <option value="65+">65 歲以上</option>
+          </select>
+          <div class="invalid-feedback">請選擇年齡層</div>
+        </div>
+
+        <div class="mb-4">
+          <label class="form-label" for="education">最高學歷</label>
+          <select class="form-select" id="education" required>
+            <option value="">請選擇最高學歷</option>
+            <option value="junior">國中（含）以下</option>
+            <option value="high">高中職</option>
+            <option value="bachelor">大學</option>
+            <option value="master">碩士</option>
+            <option value="phd">博士</option>
+          </select>
+          <div class="invalid-feedback">請選擇最高學歷</div>
+        </div>
+
+        <button type="submit" class="btn btn-primary">開始測試</button>
+      </form>
     </div>
 
     <!-- 打字測試區域 -->
@@ -102,6 +156,7 @@
   <script>
     const records = [];
     const keyMap = {};
+    let demographicData = {};
 
     // 同意書相關
     document.getElementById("consentCheck").addEventListener("change", (e) => {
@@ -110,6 +165,29 @@
 
     document.getElementById("startBtn").addEventListener("click", () => {
       document.getElementById("consentSection").style.display = "none";
+      document.getElementById("demographicSection").style.display = "block";
+    });
+
+    // 基本資料表單驗證
+    document.getElementById("demographicForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const form = e.target;
+      
+      if (!form.checkValidity()) {
+        e.stopPropagation();
+        form.classList.add('was-validated');
+        return;
+      }
+
+      // 收集基本資料
+      demographicData = {
+        gender: document.querySelector('input[name="gender"]:checked').value,
+        ageGroup: document.getElementById("ageGroup").value,
+        education: document.getElementById("education").value
+      };
+
+      // 顯示打字測試區域
+      document.getElementById("demographicSection").style.display = "none";
       document.getElementById("typingSection").style.display = "block";
     });
 
@@ -142,10 +220,15 @@
         loadingIndicator.style.display = "block";
         uploadBtn.disabled = true;
 
+        const uploadData = {
+          demographic: demographicData,
+          typingData: records
+        };
+
         const response = await fetch("https://dnm-keystroke.onrender.com/upload", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(records)
+          body: JSON.stringify(uploadData)
         });
 
         const data = await response.json();
