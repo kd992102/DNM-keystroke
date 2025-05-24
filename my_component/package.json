@@ -1,8 +1,0 @@
-{
-  "name": "my-js-component",
-  "version": "0.1.0",
-  "private": true,
-  "dependencies": {
-    "streamlit-component-lib": "^1.4.0"
-  }
-}
