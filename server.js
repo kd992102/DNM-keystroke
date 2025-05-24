@@ -3,6 +3,7 @@ const cors = require('cors');
 const { google } = require('googleapis');
 const fs = require('fs');
 const { Readable } = require('stream');
+const path = require('path');
 
 const app = express();
 
@@ -14,6 +15,9 @@ app.use(cors({
 }));
 
 app.use(express.json());
+
+// 設置靜態文件服務
+app.use(express.static(path.join(__dirname)));
 
 // 從環境變數或檔案讀取憑證
 let auth;
@@ -33,7 +37,7 @@ if (process.env.GOOGLE_CREDENTIALS) {
 const folderId = process.env.FOLDER_ID || '1V0mHUym7i95R1Wzpcjm2hMn_8Nn2G-rl';
 
 app.get('/', (req, res) => {
-  res.json({ message: '伺服器運作中！' });
+  res.sendFile(path.join(__dirname, 'test.html'));
 });
 
 app.post('/upload', async (req, res) => {
