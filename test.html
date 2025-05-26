@@ -121,6 +121,31 @@
           <div class="invalid-feedback">請選擇最高學歷</div>
         </div>
 
+        <div class="mb-4">
+          <label class="form-label" for="deviceUsage">平均每日使用3C產品時長</label>
+          <select class="form-select" id="deviceUsage" required>
+            <option value="">請選擇使用時長</option>
+            <option value="0-2">0-2小時</option>
+            <option value="2-4">2-4小時</option>
+            <option value="4-6">4-6小時</option>
+            <option value="6-8">6-8小時</option>
+            <option value="8+">8小時以上</option>
+          </select>
+          <div class="invalid-feedback">請選擇使用時長</div>
+        </div>
+
+        <div class="mb-4">
+          <label class="form-label" for="inputDevice">目前使用的輸入裝置</label>
+          <select class="form-select" id="inputDevice" required>
+            <option value="">請選擇輸入裝置</option>
+            <option value="computer">電腦</option>
+            <option value="phone">手機</option>
+            <option value="tablet">平板</option>
+            <option value="other">其他</option>
+          </select>
+          <div class="invalid-feedback">請選擇輸入裝置</div>
+        </div>
+
         <button type="submit" class="btn btn-primary">開始測試</button>
       </form>
     </div>
@@ -157,6 +182,22 @@
     const records = [];
     const keyMap = {};
     let demographicData = {};
+    const sampleText = "The quick brown fox jumps over the lazy dog. 敏捷的棕色狐狸跳過懶惰的狗。";
+
+    // 計算正確率的函數
+    function calculateAccuracy(input) {
+      let correct = 0;
+      const inputLength = input.length;
+      const sampleLength = sampleText.length;
+      
+      for (let i = 0; i < inputLength && i < sampleLength; i++) {
+        if (input[i] === sampleText[i]) {
+          correct++;
+        }
+      }
+      
+      return (correct / sampleLength * 100).toFixed(2);
+    }
 
     // 同意書相關
     document.getElementById("consentCheck").addEventListener("change", (e) => {
@@ -183,7 +224,9 @@
       demographicData = {
         gender: document.querySelector('input[name="gender"]:checked').value,
         ageGroup: document.getElementById("ageGroup").value,
-        education: document.getElementById("education").value
+        education: document.getElementById("education").value,
+        deviceUsage: document.getElementById("deviceUsage").value,
+        inputDevice: document.getElementById("inputDevice").value
       };
 
       // 顯示打字測試區域
@@ -220,9 +263,14 @@
         loadingIndicator.style.display = "block";
         uploadBtn.disabled = true;
 
+        const typedText = document.getElementById("typingArea").value;
+        const accuracy = calculateAccuracy(typedText);
+
         const uploadData = {
           demographic: demographicData,
-          typingData: records
+          typingData: records,
+          accuracy: accuracy,
+          typedText: typedText
         };
 
         const response = await fetch("https://dnm-keystroke.onrender.com/upload", {
